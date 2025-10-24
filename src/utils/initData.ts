@@ -1,0 +1,130 @@
+import storage from '@/services/localStorage';
+
+export function initializeDemoData() {
+  if (storage.getUsers().length === 0) {
+    // Create demo donor
+    storage.saveUser({
+      id: 'donor-1',
+      email: 'donor@example.com',
+      password: 'password123',
+      role: 'donor',
+      fullName: "John's Restaurant",
+      phone: '+1234567890',
+      address: '123 Main St, Downtown',
+      latitude: 40.7128,
+      longitude: -74.006,
+      profilePicture: null,
+      createdAt: new Date().toISOString(),
+      organizationName: null,
+      registrationNumber: null,
+      description: null,
+      isVerified: false,
+    });
+
+    // Create demo NGO
+    storage.saveUser({
+      id: 'ngo-1',
+      email: 'ngo@example.com',
+      password: 'password123',
+      role: 'ngo',
+      fullName: 'Maria Garcia',
+      phone: '+1234567891',
+      address: '456 Oak Ave, Suburb',
+      latitude: 40.7589,
+      longitude: -73.9851,
+      profilePicture: null,
+      createdAt: new Date().toISOString(),
+      organizationName: 'Food Rescue Foundation',
+      registrationNumber: 'NGO12345',
+      description: 'Helping communities by reducing food waste',
+      isVerified: true,
+    });
+
+    // Create sample donations
+    const now = new Date();
+    const donations = [
+      {
+        id: 'donation-1',
+        donorId: 'donor-1',
+        donorName: "John's Restaurant",
+        donorPhone: '+1234567890',
+        foodName: 'Fresh Sandwiches',
+        description: '50 freshly made sandwiches from lunch buffet',
+        quantity: 50,
+        quantityUnit: 'servings',
+        category: 'Cooked Food',
+        allergens: ['Gluten', 'Dairy'],
+        expiryTime: new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString(),
+        pickupAddress: '123 Main St, Downtown',
+        pickupLatitude: 40.7128,
+        pickupLongitude: -74.006,
+        pickupTimeStart: new Date(now.getTime() + 1 * 60 * 60 * 1000).toISOString(),
+        pickupTimeEnd: new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString(),
+        status: 'available' as const,
+        claimedBy: null,
+        claimedByName: null,
+        claimedAt: null,
+        additionalNotes: 'Please bring insulated bags',
+        images: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'donation-2',
+        donorId: 'donor-1',
+        donorName: "John's Restaurant",
+        donorPhone: '+1234567890',
+        foodName: 'Fresh Vegetables',
+        description: 'Assorted fresh vegetables - carrots, lettuce, tomatoes',
+        quantity: 15,
+        quantityUnit: 'kg',
+        category: 'Raw Ingredients',
+        allergens: ['None'],
+        expiryTime: new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString(),
+        pickupAddress: '123 Main St, Downtown',
+        pickupLatitude: 40.7128,
+        pickupLongitude: -74.006,
+        pickupTimeStart: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+        pickupTimeEnd: new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString(),
+        status: 'available' as const,
+        claimedBy: null,
+        claimedByName: null,
+        claimedAt: null,
+        additionalNotes: 'Side entrance pickup',
+        images: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'donation-3',
+        donorId: 'donor-1',
+        donorName: "John's Restaurant",
+        donorPhone: '+1234567890',
+        foodName: 'Packaged Pasta',
+        description: 'Unopened boxes of pasta - various shapes',
+        quantity: 20,
+        quantityUnit: 'boxes',
+        category: 'Packaged Food',
+        allergens: ['Gluten'],
+        expiryTime: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        pickupAddress: '123 Main St, Downtown',
+        pickupLatitude: 40.7128,
+        pickupLongitude: -74.006,
+        pickupTimeStart: new Date(now.getTime() + 1 * 60 * 60 * 1000).toISOString(),
+        pickupTimeEnd: new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString(),
+        status: 'available' as const,
+        claimedBy: null,
+        claimedByName: null,
+        claimedAt: null,
+        additionalNotes: '',
+        images: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ];
+
+    donations.forEach(donation => storage.saveDonation(donation));
+
+    console.log('Demo data initialized successfully!');
+  }
+}
