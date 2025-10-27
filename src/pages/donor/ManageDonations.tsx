@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
@@ -6,26 +6,63 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Package, Clock, CheckCircle, XCircle } from 'lucide-react';
-import storage from '@/services/localStorage';
+import * as fs from '@/services/firestore';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
+import type { Donation } from '@/types/firebase';
 
 export default function ManageDonations() {
   const { currentUser } = useAuth();
   const [statusFilter, setStatusFilter] = useState('all');
-  
-  const allDonations = currentUser ? storage.getDonations().filter(d => d.donorId === currentUser.id) : [];
+  const [allDonations, setAllDonations] = useState<Donation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadDonations();
+    }
+  }, [currentUser]);
+
+  const loadDonations = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const donorDonations = await fs.getDonationsByDonor(currentUser.id);
+      setAllDonations(donorDonations);
+    } catch (error) {
+      console.error('Error loading donations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const donations = statusFilter === 'all' 
     ? allDonations 
     : allDonations.filter(d => d.status === statusFilter);
 
-  const handleCancel = (donationId: string) => {
-    storage.updateDonation(donationId, { status: 'cancelled' });
-    toast.success('Donation cancelled');
-    window.location.reload();
+  const handleCancel = async (donationId: string) => {
+    try {
+      await fs.updateDonation(donationId, { status: 'cancelled' });
+      toast.success('Donation cancelled');
+      // Refresh donations
+      loadDonations();
+    } catch (error) {
+      console.error('Error cancelling donation:', error);
+      toast.error('Failed to cancel donation');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex justify-center">Loading...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

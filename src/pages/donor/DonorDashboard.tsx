@@ -4,14 +4,35 @@ import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, TrendingUp, CheckCircle, Clock, Plus } from 'lucide-react';
-import storage from '@/services/localStorage';
+import * as fs from '@/services/firestore';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatDistanceToNow } from 'date-fns';
+import { useState, useEffect } from 'react';
+import type { Donation } from '@/types/firebase';
 
 export default function DonorDashboard() {
   const { currentUser } = useAuth();
-  const donations = currentUser ? storage.getDonations().filter(d => d.donorId === currentUser.id) : [];
-  
+  const [donations, setDonations] = useState<Donation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadDonations();
+    }
+  }, [currentUser]);
+
+  const loadDonations = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const donorDonations = await fs.getDonationsByDonor(currentUser.id);
+      setDonations(donorDonations);
+    } catch (error) {
+      console.error('Error loading donations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   const stats = {
     total: donations.length,
     active: donations.filter(d => d.status === 'available' || d.status === 'claimed').length,
@@ -20,6 +41,17 @@ export default function DonorDashboard() {
   };
 
   const recentDonations = donations.slice(0, 5);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex justify-center">Loading...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -1,12 +1,20 @@
-import storage from '@/services/localStorage';
+import * as fs from '@/services/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/firebase/config';
 
-export function initializeDemoData() {
-  if (storage.getUsers().length === 0) {
-    // Create demo donor
-    storage.saveUser({
-      id: 'donor-1',
+export async function initializeDemoData() {
+  try {
+    // Check if demo data already exists
+    const existingDonations = await fs.getAllDonations();
+    if (existingDonations.length > 0) {
+      console.log('Demo data already exists');
+      return;
+    }
+
+    // Create demo donor account
+    const donorCred = await createUserWithEmailAndPassword(auth, 'donor@example.com', 'password123');
+    const donorProfile = await fs.createUserProfile(donorCred.user.uid, {
       email: 'donor@example.com',
-      password: 'password123',
       role: 'donor',
       fullName: "John's Restaurant",
       phone: '+1234567890',
@@ -14,18 +22,16 @@ export function initializeDemoData() {
       latitude: 40.7128,
       longitude: -74.006,
       profilePicture: null,
-      createdAt: new Date().toISOString(),
       organizationName: null,
       registrationNumber: null,
       description: null,
       isVerified: false,
     });
 
-    // Create demo NGO
-    storage.saveUser({
-      id: 'ngo-1',
+    // Create demo NGO account
+    const ngoCred = await createUserWithEmailAndPassword(auth, 'ngo@example.com', 'password123');
+    const ngoProfile = await fs.createUserProfile(ngoCred.user.uid, {
       email: 'ngo@example.com',
-      password: 'password123',
       role: 'ngo',
       fullName: 'Maria Garcia',
       phone: '+1234567891',
@@ -33,7 +39,6 @@ export function initializeDemoData() {
       latitude: 40.7589,
       longitude: -73.9851,
       profilePicture: null,
-      createdAt: new Date().toISOString(),
       organizationName: 'Food Rescue Foundation',
       registrationNumber: 'NGO12345',
       description: 'Helping communities by reducing food waste',
@@ -44,8 +49,7 @@ export function initializeDemoData() {
     const now = new Date();
     const donations = [
       {
-        id: 'donation-1',
-        donorId: 'donor-1',
+        donorId: donorProfile.id,
         donorName: "John's Restaurant",
         donorPhone: '+1234567890',
         foodName: 'Fresh Sandwiches',
@@ -66,12 +70,9 @@ export function initializeDemoData() {
         claimedAt: null,
         additionalNotes: 'Please bring insulated bags',
         images: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       },
       {
-        id: 'donation-2',
-        donorId: 'donor-1',
+        donorId: donorProfile.id,
         donorName: "John's Restaurant",
         donorPhone: '+1234567890',
         foodName: 'Fresh Vegetables',
@@ -92,12 +93,9 @@ export function initializeDemoData() {
         claimedAt: null,
         additionalNotes: 'Side entrance pickup',
         images: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       },
       {
-        id: 'donation-3',
-        donorId: 'donor-1',
+        donorId: donorProfile.id,
         donorName: "John's Restaurant",
         donorPhone: '+1234567890',
         foodName: 'Packaged Pasta',
@@ -118,13 +116,16 @@ export function initializeDemoData() {
         claimedAt: null,
         additionalNotes: '',
         images: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       },
     ];
 
-    donations.forEach(donation => storage.saveDonation(donation));
+    // Create donations in Firebase
+    for (const donation of donations) {
+      await fs.createDonation(donation);
+    }
 
     console.log('Demo data initialized successfully!');
+  } catch (error) {
+    console.error('Error initializing demo data:', error);
   }
 }

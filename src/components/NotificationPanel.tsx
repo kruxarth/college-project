@@ -10,9 +10,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import storage from '@/services/localStorage';
+import * as fs from '@/services/firestore';
 import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import type { Notification } from '@/types';
 
 interface NotificationPanelProps {
   userId: string;
@@ -21,22 +22,43 @@ interface NotificationPanelProps {
 }
 
 export function NotificationPanel({ userId, unreadCount, onUpdate }: NotificationPanelProps) {
-  const [notifications, setNotifications] = useState(storage.getNotifications(userId));
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
-    setNotifications(storage.getNotifications(userId));
+    const loadNotifications = async () => {
+      try {
+        const notifs = await fs.getNotificationsForUser(userId);
+        setNotifications(notifs);
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      }
+    };
+
+    if (userId) {
+      loadNotifications();
+    }
   }, [userId, unreadCount]);
 
-  const markAsRead = (notificationId: string) => {
-    storage.markNotificationRead(notificationId);
-    setNotifications(storage.getNotifications(userId));
-    onUpdate();
+  const markAsRead = async (notificationId: string) => {
+    try {
+      await fs.markNotificationAsRead(notificationId);
+      const updatedNotifs = await fs.getNotificationsForUser(userId);
+      setNotifications(updatedNotifs);
+      onUpdate();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    storage.markAllNotificationsRead(userId);
-    setNotifications(storage.getNotifications(userId));
-    onUpdate();
+  const markAllAsRead = async () => {
+    try {
+      await fs.markAllNotificationsAsRead(userId);
+      const updatedNotifs = await fs.getNotificationsForUser(userId);
+      setNotifications(updatedNotifs);
+      onUpdate();
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
   };
 
   return (

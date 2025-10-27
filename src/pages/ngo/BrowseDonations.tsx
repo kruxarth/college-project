@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
@@ -9,23 +9,57 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Package, Search, SlidersHorizontal } from 'lucide-react';
-import storage from '@/services/localStorage';
+import * as fs from '@/services/firestore';
 import { calculateDistance, formatDistance } from '@/utils/distance';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import type { Donation } from '@/types/firebase';
 
 const categories = ['All', 'Cooked Food', 'Raw Ingredients', 'Packaged Food', 'Baked Goods', 'Beverages', 'Fruits & Vegetables', 'Dairy Products', 'Other'];
 const allergens = ['Nuts', 'Dairy', 'Gluten', 'Soy', 'Eggs', 'Seafood', 'Shellfish'];
 const distanceOptions = ['5', '10', '25', '50', '100'];
 
 export default function BrowseDonations() {
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [excludeAllergens, setExcludeAllergens] = useState<string[]>([]);
   const [distanceFilter, setDistanceFilter] = useState('50');
   const [sortBy, setSortBy] = useState('nearest');
+  const [availableDonations, setAvailableDonations] = useState<Donation[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const availableDonations = storage.getDonations().filter(d => d.status === 'available');
+  useEffect(() => {
+    loadDonations();
+  }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadUserProfile();
+    }
+  }, [currentUser]);
+
+  const loadUserProfile = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const profile = await fs.getUserProfile(currentUser.id);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
+
+  const loadDonations = async () => {
+    try {
+      const donations = await fs.getAvailableDonations();
+      setAvailableDonations(donations);
+    } catch (error) {
+      console.error('Error loading donations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleAllergen = (allergen: string) => {
     setExcludeAllergens(prev =>
@@ -33,7 +67,7 @@ export default function BrowseDonations() {
     );
   };
 
-  const filteredDonations = availableDonations
+  const filteredDonations = userProfile ? availableDonations
     .filter(d => {
       const matchesSearch = d.foodName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         d.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -45,7 +79,7 @@ export default function BrowseDonations() {
     })
     .map(d => ({
       ...d,
-      distance: calculateDistance(user!.latitude, user!.longitude, d.pickupLatitude, d.pickupLongitude),
+      distance: calculateDistance(userProfile.latitude, userProfile.longitude, d.pickupLatitude, d.pickupLongitude),
     }))
     .filter(d => d.distance <= Number(distanceFilter))
     .sort((a, b) => {
@@ -53,7 +87,18 @@ export default function BrowseDonations() {
       if (sortBy === 'expiring') return new Date(a.expiryTime).getTime() - new Date(b.expiryTime).getTime();
       if (sortBy === 'quantity') return b.quantity - a.quantity;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+    }) : [];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex justify-center">Loading...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

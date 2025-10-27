@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, MapPin, Clock, Phone, User, Calendar, AlertCircle } from 'lucide-react';
-import storage from '@/services/localStorage';
+import * as fs from '@/services/firestore';
 import { StatusBadge } from '@/components/StatusBadge';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { generateUUID } from '@/utils/image';
 import { calculateDistance, formatDistance } from '@/utils/distance';
+import { useState, useEffect } from 'react';
+import type { Donation, StatusHistory } from '@/types/firebase';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,10 +26,64 @@ import {
 
 export default function DonationDetail() {
   const { id } = useParams();
-  const { currentUser, user } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   
-  const donation = storage.getDonationById(id!);
+  const [donation, setDonation] = useState<Donation | null>(null);
+  const [statusHistory, setStatusHistory] = useState<StatusHistory[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (id) {
+      loadDonation();
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadUserProfile();
+    }
+  }, [currentUser]);
+
+  const loadUserProfile = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const profile = await fs.getUserProfile(currentUser.id);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
+
+  const loadDonation = async () => {
+    if (!id) return;
+    
+    try {
+      const donationData = await fs.getDonationById(id);
+      if (donationData) {
+        setDonation(donationData);
+        const history = await fs.getStatusHistory(id);
+        setStatusHistory(history);
+      }
+    } catch (error) {
+      console.error('Error loading donation:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8 text-center">
+          <div>Loading...</div>
+        </main>
+      </div>
+    );
+  }
 
   if (!donation) {
     return (
@@ -48,47 +103,48 @@ export default function DonationDetail() {
   const canClaim = isNgo && donation.status === 'available';
   const isClaimed = donation.claimedBy === currentUser?.id;
 
-  const distance = isNgo ? calculateDistance(
-    user!.latitude,
-    user!.longitude,
+  const distance = isNgo && userProfile ? calculateDistance(
+    userProfile.latitude,
+    userProfile.longitude,
     donation.pickupLatitude,
     donation.pickupLongitude
   ) : 0;
 
-  const handleClaim = () => {
-    storage.updateDonation(donation.id, {
-      status: 'claimed',
-      claimedBy: currentUser!.id,
-      claimedByName: user!.organizationName || user!.fullName,
-      claimedAt: new Date().toISOString(),
-    });
+  const handleClaim = async () => {
+    if (!currentUser || !donation || !userProfile) return;
+    
+    try {
+      await fs.updateDonation(donation.id, {
+        status: 'claimed',
+        claimedBy: currentUser.id,
+        claimedByName: userProfile.organizationName || userProfile.fullName,
+        claimedAt: new Date().toISOString(),
+      });
 
-    storage.addNotification({
-      id: generateUUID(),
-      userId: donation.donorId,
-      title: 'Donation Claimed',
-      message: `Your donation "${donation.foodName}" has been claimed by ${user!.organizationName || user!.fullName}`,
-      type: 'donation_claimed',
-      isRead: false,
-      relatedDonationId: donation.id,
-      createdAt: new Date().toISOString(),
-    });
+      await fs.addNotification({
+        userId: donation.donorId,
+        title: 'Donation Claimed',
+        message: `Your donation "${donation.foodName}" has been claimed by ${userProfile.organizationName || userProfile.fullName}`,
+        type: 'donation_claimed',
+        isRead: false,
+        relatedDonationId: donation.id,
+      });
 
-    storage.addStatusHistory({
-      id: generateUUID(),
-      donationId: donation.id,
-      status: 'claimed',
-      updatedBy: currentUser!.id,
-      updatedByName: user!.organizationName || user!.fullName,
-      notes: 'Donation claimed',
-      createdAt: new Date().toISOString(),
-    });
+      await fs.addStatusHistory({
+        donationId: donation.id,
+        status: 'claimed',
+        updatedBy: currentUser.id,
+        updatedByName: userProfile.organizationName || userProfile.fullName,
+        notes: 'Donation claimed',
+      });
 
-    toast.success('Donation claimed successfully!');
-    navigate('/ngo/my-claims');
+      toast.success('Donation claimed successfully!');
+      navigate('/ngo/my-claims');
+    } catch (error) {
+      console.error('Error claiming donation:', error);
+      toast.error('Failed to claim donation');
+    }
   };
-
-  const statusHistory = storage.getStatusHistory(donation.id);
 
   return (
     <div className="min-h-screen bg-background">
