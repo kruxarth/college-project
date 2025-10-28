@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import storage from '@/services/localStorage';
+import * as fs from '@/services/firestore';
 import { useState, useEffect } from 'react';
 import { NotificationPanel } from './NotificationPanel';
 
@@ -20,10 +20,18 @@ export function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (currentUser) {
-      const notifications = storage.getNotifications(currentUser.id);
-      setUnreadCount(notifications.filter(n => !n.isRead).length);
-    }
+    const loadNotifications = async () => {
+      if (currentUser) {
+        try {
+          const notifications = await fs.getNotificationsForUser(currentUser.id);
+          setUnreadCount(notifications.filter(n => !n.isRead).length);
+        } catch (error) {
+          console.error('Error loading notifications:', error);
+        }
+      }
+    };
+
+    loadNotifications();
   }, [currentUser]);
 
   if (!currentUser || !user) return null;
@@ -66,9 +74,13 @@ export function Navbar() {
             <NotificationPanel 
               userId={currentUser.id} 
               unreadCount={unreadCount}
-              onUpdate={() => {
-                const notifications = storage.getNotifications(currentUser.id);
-                setUnreadCount(notifications.filter(n => !n.isRead).length);
+              onUpdate={async () => {
+                try {
+                  const notifications = await fs.getNotificationsForUser(currentUser.id);
+                  setUnreadCount(notifications.filter(n => !n.isRead).length);
+                } catch (error) {
+                  console.error('Error updating notifications:', error);
+                }
               }}
             />
 

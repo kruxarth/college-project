@@ -28,8 +28,8 @@ export default function Login() {
 
     if (result.success) {
       toast.success('Logged in successfully!');
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      navigate(`/${currentUser.role}/dashboard`);
+      const role = result.role || 'donor';
+      navigate(`/${role}/dashboard`);
     } else {
       toast.error(result.error || 'Login failed');
     }

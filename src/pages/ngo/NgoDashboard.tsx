@@ -4,16 +4,45 @@ import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, TrendingUp, Clock, CheckCircle, Search } from 'lucide-react';
-import storage from '@/services/localStorage';
+import * as fs from '@/services/firestore';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatDistanceToNow } from 'date-fns';
 import { calculateDistance, formatDistance } from '@/utils/distance';
+import { useState, useEffect } from 'react';
+import type { Donation } from '@/types/firebase';
 
 export default function NgoDashboard() {
-  const { currentUser, user } = useAuth();
-  const myClaims = currentUser ? storage.getDonations().filter(d => d.claimedBy === currentUser.id) : [];
-  const availableDonations = storage.getDonations().filter(d => d.status === 'available');
-  
+  const { currentUser } = useAuth();
+  const [myClaims, setMyClaims] = useState<Donation[]>([]);
+  const [availableDonations, setAvailableDonations] = useState<Donation[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadData();
+    }
+  }, [currentUser]);
+
+  const loadData = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const [claims, available, profile] = await Promise.all([
+        fs.getDonationsByClaimer(currentUser.id),
+        fs.getAvailableDonations(),
+        fs.getUserProfile(currentUser.id)
+      ]);
+      
+      setMyClaims(claims);
+      setAvailableDonations(available);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   const stats = {
     totalReceived: myClaims.filter(d => d.status === 'completed').length,
     activeClaims: myClaims.filter(d => d.status !== 'completed' && d.status !== 'cancelled').length,
@@ -21,13 +50,24 @@ export default function NgoDashboard() {
     totalQuantity: myClaims.filter(d => d.status === 'completed').reduce((sum, d) => sum + d.quantity, 0),
   };
 
-  const nearbyDonations = availableDonations
+  const nearbyDonations = userProfile ? availableDonations
     .map(d => ({
       ...d,
-      distance: calculateDistance(user!.latitude, user!.longitude, d.pickupLatitude, d.pickupLongitude),
+      distance: calculateDistance(userProfile.latitude, userProfile.longitude, d.pickupLatitude, d.pickupLongitude),
     }))
     .sort((a, b) => a.distance - b.distance)
-    .slice(0, 6);
+    .slice(0, 6) : [];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex justify-center">Loading...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import storage from '@/services/localStorage';
+import * as fs from '@/services/firestore';
 import { compressImage, generateUUID } from '@/utils/image';
 
 const categories = [
@@ -108,37 +108,41 @@ export default function CreateDonation() {
 
     setLoading(true);
 
-    const donation = {
-      id: generateUUID(),
-      donorId: currentUser!.id,
-      donorName: user!.fullName,
-      donorPhone: user!.phone,
-      foodName: formData.foodName,
-      description: formData.description,
-      quantity: Number(formData.quantity),
-      quantityUnit: formData.quantityUnit,
-      category: formData.category,
-      allergens: selectedAllergens,
-      expiryTime: new Date(formData.expiryTime).toISOString(),
-      pickupAddress: formData.pickupAddress,
-      pickupLatitude: user!.latitude,
-      pickupLongitude: user!.longitude,
-      pickupTimeStart: new Date(formData.pickupTimeStart).toISOString(),
-      pickupTimeEnd: new Date(formData.pickupTimeEnd).toISOString(),
-      status: 'available' as const,
-      claimedBy: null,
-      claimedByName: null,
-      claimedAt: null,
-      additionalNotes: formData.additionalNotes,
-      images,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      const donation = {
+        donorId: currentUser!.id,
+        donorName: user!.fullName,
+        donorPhone: user!.phone,
+        foodName: formData.foodName,
+        description: formData.description,
+        quantity: Number(formData.quantity),
+        quantityUnit: formData.quantityUnit,
+        category: formData.category,
+        allergens: selectedAllergens,
+        expiryTime: new Date(formData.expiryTime).toISOString(),
+        pickupAddress: formData.pickupAddress,
+        pickupLatitude: user!.latitude,
+        pickupLongitude: user!.longitude,
+        pickupTimeStart: new Date(formData.pickupTimeStart).toISOString(),
+        pickupTimeEnd: new Date(formData.pickupTimeEnd).toISOString(),
+        status: 'available' as const,
+        claimedBy: null,
+        claimedByName: null,
+        claimedAt: null,
+        additionalNotes: formData.additionalNotes,
+        images,
+      };
 
-    storage.saveDonation(donation);
+      await fs.createDonation(donation);
 
-    toast.success('Donation created successfully!');
-    navigate('/donor/donations');
+      toast.success('Donation created successfully!');
+      navigate('/donor/donations');
+    } catch (error) {
+      console.error('Error creating donation:', error);
+      toast.error('Failed to create donation. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
