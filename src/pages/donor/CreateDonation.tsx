@@ -109,10 +109,15 @@ export default function CreateDonation() {
     setLoading(true);
 
     try {
+      if (!currentUser || !user) {
+        toast.error('User not authenticated');
+        return;
+      }
+
       const donation = {
-        donorId: currentUser!.id,
-        donorName: user!.fullName,
-        donorPhone: user!.phone,
+        donorId: currentUser.id,
+        donorName: user.fullName,
+        donorPhone: user.phone,
         foodName: formData.foodName,
         description: formData.description,
         quantity: Number(formData.quantity),
@@ -121,8 +126,8 @@ export default function CreateDonation() {
         allergens: selectedAllergens,
         expiryTime: new Date(formData.expiryTime).toISOString(),
         pickupAddress: formData.pickupAddress,
-        pickupLatitude: user!.latitude,
-        pickupLongitude: user!.longitude,
+        pickupLatitude: user.latitude,
+        pickupLongitude: user.longitude,
         pickupTimeStart: new Date(formData.pickupTimeStart).toISOString(),
         pickupTimeEnd: new Date(formData.pickupTimeEnd).toISOString(),
         status: 'available' as const,
@@ -133,10 +138,15 @@ export default function CreateDonation() {
         images,
       };
 
-      await fs.createDonation(donation);
+      console.log('About to create donation for user:', currentUser.id);
+      console.log('Donation data:', donation);
+      
+      const newDonation = await fs.createDonation(donation);
+      console.log('Donation created successfully:', newDonation);
 
       toast.success('Donation created successfully!');
-      navigate('/donor/donations');
+      // Navigate to manage donations page with a refresh flag
+      navigate('/donor/donations', { replace: true });
     } catch (error) {
       console.error('Error creating donation:', error);
       toast.error('Failed to create donation. Please try again.');

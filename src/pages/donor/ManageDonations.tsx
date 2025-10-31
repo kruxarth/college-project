@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import * as fs from '@/services/firestore';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -14,24 +14,29 @@ import type { Donation } from '@/types/firebase';
 
 export default function ManageDonations() {
   const { currentUser } = useAuth();
+  const location = useLocation();
   const [statusFilter, setStatusFilter] = useState('all');
   const [allDonations, setAllDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   useEffect(() => {
     if (currentUser) {
       loadDonations();
     }
-  }, [currentUser]);
+  }, [currentUser, location.pathname]); // Added location.pathname to dependency array
 
   const loadDonations = async () => {
     if (!currentUser) return;
     
     try {
+      setLoading(true);
       const donorDonations = await fs.getDonationsByDonor(currentUser.id);
       setAllDonations(donorDonations);
+      setLastRefresh(new Date());
     } catch (error) {
       console.error('Error loading donations:', error);
+      toast.error('Failed to load donations. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -71,7 +76,14 @@ export default function ManageDonations() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold mb-2">My Donations</h1>
-            <p className="text-muted-foreground">Manage and track your donations</p>
+            <p className="text-muted-foreground">
+              Manage and track your donations
+              {lastRefresh && (
+                <span className="ml-2 text-xs">
+                  (Last updated: {format(lastRefresh, 'HH:mm:ss')})
+                </span>
+              )}
+            </p>
           </div>
           <Button asChild>
             <Link to="/donor/create-donation">Create Donation</Link>
@@ -93,6 +105,15 @@ export default function ManageDonations() {
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
+          <Button 
+            variant="outline" 
+            onClick={loadDonations} 
+            disabled={loading}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
 
         {donations.length === 0 ? (
@@ -101,8 +122,17 @@ export default function ManageDonations() {
               <Package className="h-20 w-20 text-muted-foreground mb-4" />
               <h3 className="text-xl font-semibold mb-2">No donations found</h3>
               <p className="text-muted-foreground mb-6">
-                {statusFilter === 'all' ? 'Start making a difference by creating your first donation' : `No ${statusFilter} donations`}
+                {statusFilter === 'all' ? 
+                  `Start making a difference by creating your first donation${allDonations.length > 0 ? ` (${allDonations.length} total donations loaded)` : ''}` : 
+                  `No ${statusFilter} donations`
+                }
               </p>
+              {statusFilter === 'all' && (
+                <div className="text-xs text-muted-foreground mb-4">
+                  User ID: {currentUser?.id}<br />
+                  Total donations: {allDonations.length}
+                </div>
+              )}
               <Button asChild>
                 <Link to="/donor/create-donation">Create Donation</Link>
               </Button>
