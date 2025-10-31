@@ -48,15 +48,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const uid = cred.user.uid;
       const profile = await fs.getUserProfile(uid);
+      
       if (!profile) {
-        return { success: false, error: 'Profile not found' };
+        return { success: false, error: 'User profile not found. Please contact support.' };
       }
+      
       const session: CurrentUser = { id: uid, email: profile.email, role: profile.role };
       setCurrentUser(session);
       setUser(profile as User);
+      
       return { success: true, role: profile.role };
     } catch (err: any) {
-      const message = err?.message || 'Login failed';
+      let message = 'Login failed';
+      
+      // Provide more specific error messages
+      switch (err?.code) {
+        case 'auth/user-not-found':
+          message = 'No account found with this email address. Please sign up first.';
+          break;
+        case 'auth/wrong-password':
+          message = 'Incorrect password. Please try again.';
+          break;
+        case 'auth/invalid-email':
+          message = 'Invalid email format.';
+          break;
+        case 'auth/too-many-requests':
+          message = 'Too many failed attempts. Please wait a few minutes before trying again.';
+          break;
+        case 'auth/network-request-failed':
+          message = 'Network error. Please check your internet connection.';
+          break;
+        case 'auth/invalid-credential':
+          message = 'Invalid email or password. Please check your credentials.';
+          break;
+        default:
+          message = err?.message || 'Login failed';
+      }
+      
       return { success: false, error: message };
     }
   };

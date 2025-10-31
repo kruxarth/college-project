@@ -52,10 +52,28 @@ export default function BrowseDonations() {
 
   const loadDonations = async () => {
     try {
-      const donations = await fs.getAvailableDonations();
+      console.log('🔄 Loading available donations...');
+      let donations;
+      try {
+        donations = await fs.getAvailableDonations();
+      } catch (error) {
+        console.log('Primary method failed, trying fallback method...');
+        donations = await fs.getAvailableDonationsBasic();
+      }
+      console.log(`📦 Loaded ${donations.length} available donations`);
+      
+      if (donations.length > 0) {
+        console.log('📝 Sample donations:', donations.slice(0, 2).map(d => ({
+          id: d.id,
+          name: d.foodName,
+          status: d.status,
+          created: d.createdAt
+        })));
+      }
+      
       setAvailableDonations(donations);
     } catch (error) {
-      console.error('Error loading donations:', error);
+      console.error('❌ Error loading donations:', error);
     } finally {
       setLoading(false);
     }
