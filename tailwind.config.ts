@@ -55,10 +55,19 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Fruit-inspired color palette
+        'raspberry-red': "hsl(var(--raspberry-red))",
+        'mango-orange': "hsl(var(--mango-orange))",
+        'peach': "hsl(var(--peach))",
+        'banana-cream': "hsl(var(--banana-cream))",
+        'plum-purple': "hsl(var(--plum-purple))",
       },
       backgroundImage: {
         'gradient-warm': 'var(--gradient-warm)',
         'gradient-hero': 'var(--gradient-hero)',
+        'gradient-stats': 'var(--gradient-stats)',
+        'gradient-peach': 'var(--gradient-peach)',
+        'gradient-fruit': 'var(--gradient-fruit)',
       },
       boxShadow: {
         'soft': 'var(--shadow-soft)',

@@ -27,7 +27,7 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-accent/10">
+    <div className="min-h-screen bg-white">
       <Header 
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
@@ -42,8 +42,10 @@ export default function Landing() {
         <ContactSection />
       </main>
 
-      <footer className="container mx-auto px-4 py-8 text-center text-muted-foreground">
-        <p>&copy; 2025 Nourish. Making every meal count.</p>
+      <footer className="bg-gray-50 border-t">
+        <div className="container mx-auto px-4 py-8 text-center text-gray-600">
+          <p>&copy; 2025 Nourish. Making every meal count.</p>
+        </div>
       </footer>
     </div>
   );
