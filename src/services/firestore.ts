@@ -14,6 +14,10 @@ export async function createDonation(donation: Omit<Donation, 'id' | 'createdAt'
   try {
     const ref = await addDoc(donationsCol, donationData);
     const createdDonation = { id: ref.id, ...donationData } as Donation;
+    
+    // Clear statistics cache when new donation is created
+    clearStatisticsCache();
+    
     return createdDonation;
   } catch (error) {
     console.error('Error creating donation in Firestore:', error);
@@ -24,6 +28,9 @@ export async function createDonation(donation: Omit<Donation, 'id' | 'createdAt'
 export async function updateDonation(donationId: string, updates: Partial<Donation>) {
   const ref = doc(db, 'donations', donationId);
   await updateDoc(ref, { ...updates, updatedAt: new Date().toISOString() });
+  
+  // Clear statistics cache when donation is updated
+  clearStatisticsCache();
 }
 
 export async function deleteDonation(donationId: string) {
@@ -112,27 +119,23 @@ export async function getAvailableDonations() {
 export async function getAvailableDonationsBasic() {
   // Fallback method: get all donations and filter in memory
   try {
-    console.log('🔄 Using fallback method: getting all donations and filtering...');
     const allDonations = await getAllDonations();
     const availableDonations = allDonations.filter(d => d.status === 'available');
-    console.log(`✅ Filtered ${availableDonations.length} available from ${allDonations.length} total donations`);
     return availableDonations;
   } catch (error) {
-    console.error('❌ Error in fallback method:', error);
+    console.error('Error in fallback method:', error);
     throw error;
   }
 }
 
 export async function testFirestoreConnection() {
   try {
-    console.log('🔍 Testing Firestore connection...');
     const testQuery = query(donationsCol);
     const snapshot = await getDocs(testQuery);
-    console.log('✅ Firestore connection successful, found', snapshot.docs.length, 'documents');
     return { success: true, count: snapshot.docs.length };
-  } catch (error) {
-    console.error('❌ Firestore connection failed:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  } catch (error: any) {
+    console.error('Firestore connection failed:', error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -147,6 +150,10 @@ export async function createUserProfile(uid: string, data: Omit<User, 'id' | 'cr
   const ref = doc(db, 'users', uid);
   const payload = { ...data, id: uid, createdAt: now } as User;
   await setDoc(ref, payload);
+  
+  // Clear statistics cache when new user is created
+  clearStatisticsCache();
+  
   return payload;
 }
 
@@ -222,16 +229,34 @@ export async function getDonationsByDonor(donorId: string) {
   }
 }
 
-// Statistics functions
-export async function getStatistics() {
+// Statistics functions with caching for better performance
+let statisticsCache: {
+  data: any;
+  timestamp: number;
+} | null = null;
+
+export async function getStatistics(useCache: boolean = true) {
+  const CACHE_DURATION = 60 * 1000; // 1 minute cache
+  
+  // Check if we have valid cached data
+  if (useCache && statisticsCache) {
+    const now = Date.now();
+    if (now - statisticsCache.timestamp < CACHE_DURATION) {
+      return statisticsCache.data;
+    }
+  }
+
   try {
-    // Use Promise.all for concurrent queries to improve performance
-    const [allDonations, usersSnap] = await Promise.all([
-      getAllDonations(),
-      getDocs(query(usersCol))
-    ]);
-    
-    const allUsers = usersSnap.docs.map(d => d.data() as User);
+    const startTime = Date.now();
+    const allDonations = await getAllDonations();
+    // Try to get users (this might fail depending on rules)
+    let allUsers: User[] = [];
+    try {
+      const usersSnap = await getDocs(query(usersCol));
+      allUsers = usersSnap.docs.map(d => d.data() as User);
+    } catch (userError: any) {
+      // If users can't be read due to rules, continue with donation-only stats
+    }
     
     // Calculate donation statistics
     const totalDonations = allDonations.length;
@@ -245,10 +270,10 @@ export async function getStatistics() {
       d.status === 'cancelled'
     ).length;
     
-    // Calculate user statistics
-    const registeredUsers = allUsers.filter(u => u.role === 'donor').length;
-    const registeredNGOs = allUsers.filter(u => u.role === 'ngo').length;
-    const verifiedNGOs = allUsers.filter(u => u.role === 'ngo' && u.isVerified).length;
+    // Calculate user statistics (fallback to 0 if users unavailable)
+    const registeredUsers = allUsers.length > 0 ? allUsers.filter(u => u.role === 'donor').length : 0;
+    const registeredNGOs = allUsers.length > 0 ? allUsers.filter(u => u.role === 'ngo').length : 0;
+    const verifiedNGOs = allUsers.length > 0 ? allUsers.filter(u => u.role === 'ngo' && u.isVerified).length : 0;
     
     // Calculate impact metrics
     const totalQuantityDonated = completedDonations > 0 
@@ -299,11 +324,14 @@ export async function getStatistics() {
       new Date(d.createdAt) >= thisMonth
     ).length;
     
-    const thisMonthUsers = allUsers.filter(u => 
-      new Date(u.createdAt) >= thisMonth
-    ).length;
+    const thisMonthUsers = allUsers.length > 0 
+      ? allUsers.filter(u => new Date(u.createdAt) >= thisMonth).length 
+      : 0;
     
-    return {
+    const endTime = Date.now();
+    const queryDuration = endTime - startTime;
+    
+    const statisticsData = {
       // Core metrics
       totalDonations,
       activeDonations,
@@ -323,13 +351,36 @@ export async function getStatistics() {
       thisMonthDonations,
       thisMonthUsers,
       
-      // Timestamp
+      // Metadata
       lastUpdated: new Date().toISOString(),
+      queryDuration,
     };
+    
+    // Cache the result
+    statisticsCache = {
+      data: statisticsData,
+      timestamp: Date.now(),
+    };
+    return statisticsData;
   } catch (error) {
     console.error('Error fetching statistics:', error);
+    
+    // If we have cached data and fresh fetch fails, return cached data
+    if (statisticsCache) {
+      return {
+        ...statisticsCache.data,
+        error: 'Using cached data - latest fetch failed',
+        isStale: true,
+      };
+    }
+    
     throw new Error('Failed to fetch statistics');
   }
+}
+
+// Clear statistics cache when data changes
+export function clearStatisticsCache() {
+  statisticsCache = null;
 }
 
 export default {
@@ -354,5 +405,6 @@ export default {
   addStatusHistory,
   getStatusHistory,
   getStatistics,
+  clearStatisticsCache,
   testFirestoreConnection,
 };

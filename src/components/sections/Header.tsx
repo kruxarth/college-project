@@ -14,7 +14,7 @@ export function Header({ mobileMenuOpen, setMobileMenuOpen, scrollToSection }: H
       <div className="container mx-auto px-4 py-4">
         <nav className="flex justify-between items-center">
           <div className="flex items-center gap-2 font-bold text-2xl">
-            <span className="bg-gradient-warm bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-raspberry-red to-mango-orange bg-clip-text text-transparent">
               Nourish
             </span>
           </div>

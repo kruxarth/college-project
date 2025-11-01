@@ -6,47 +6,49 @@ import { formatDistanceToNow } from 'date-fns';
 export function StatsSection() {
   const { stats, refresh } = useStatistics(60000); // Refresh every minute
 
+
+
   const cards = [
     {
       title: 'Total Donations',
       value: stats.totalDonations,
-      icon: <Package className="h-7 w-7 text-primary" />,
-      bg: 'from-primary/10 to-primary/5 border-primary/20',
+      icon: <Package className="h-7 w-7 text-raspberry-red" />,
+      bg: 'from-raspberry-red/10 to-raspberry-red/5 border-raspberry-red/20',
       subtitle: `+${stats.thisMonthDonations} this month`,
     },
     {
       title: 'Active Donations',
       value: stats.activeDonations,
-      icon: <TrendingUp className="h-7 w-7 text-amber-500" />,
-      bg: 'from-amber-100/20 to-amber-50/10 border-amber-200/30',
+      icon: <TrendingUp className="h-7 w-7 text-mango-orange" />,
+      bg: 'from-mango-orange/20 to-mango-orange/10 border-mango-orange/30',
       subtitle: 'Currently available',
     },
     {
       title: 'Registered Donors',
       value: stats.registeredUsers,
-      icon: <Users className="h-7 w-7 text-blue-500" />,
-      bg: 'from-blue-100/20 to-blue-50/10 border-blue-200/30',
+      icon: <Users className="h-7 w-7 text-peach" />,
+      bg: 'from-peach/30 to-peach/20 border-peach/40',
       subtitle: `+${stats.thisMonthUsers} new this month`,
     },
     {
       title: 'Partner NGOs',
       value: stats.registeredNGOs,
-      icon: <Award className="h-7 w-7 text-pink-500" />,
-      bg: 'from-pink-100/20 to-pink-50/10 border-pink-200/30',
+      icon: <Award className="h-7 w-7 text-plum-purple" />,
+      bg: 'from-plum-purple/20 to-plum-purple/10 border-plum-purple/30',
       subtitle: `${stats.verifiedNGOs || 0} verified`,
     },
     {
       title: 'Meals Served',
       value: stats.totalMealsServed,
-      icon: <Globe className="h-7 w-7 text-green-500" />,
-      bg: 'from-green-100/20 to-green-50/10 border-green-200/30',
+      icon: <Globe className="h-7 w-7 text-banana-cream" />,
+      bg: 'from-banana-cream/30 to-banana-cream/20 border-banana-cream/40',
       subtitle: 'Estimated impact',
     },
     {
       title: 'Success Rate',
       value: `${stats.successRate}%`,
-      icon: <Target className="h-7 w-7 text-purple-500" />,
-      bg: 'from-purple-100/20 to-purple-50/10 border-purple-200/30',
+      icon: <Target className="h-7 w-7 text-secondary" />,
+      bg: 'from-secondary/20 to-secondary/10 border-secondary/30',
       subtitle: 'Donations completed',
     },
   ];
@@ -62,14 +64,26 @@ export function StatsSection() {
         {/* Live Data Indicator */}
         <div className="flex items-center justify-center gap-4 mb-6">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className={`w-2 h-2 rounded-full ${stats.loading ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`} />
-            <span>{stats.loading ? 'Updating...' : 'Live Data'}</span>
+            <div className={`w-2 h-2 rounded-full ${
+              stats.loading ? 'bg-yellow-500 animate-pulse' : 
+              stats.isStale ? 'bg-orange-500' : 'bg-green-500'
+            }`} />
+            <span>
+              {stats.loading ? 'Updating...' : 
+               stats.isStale ? 'Cached Data' : 'Live Data'}
+            </span>
           </div>
           
           {stats.lastUpdated && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="h-4 w-4" />
               <span>Updated {formatDistanceToNow(stats.lastUpdated, { addSuffix: true })}</span>
+            </div>
+          )}
+          
+          {stats.queryDuration && stats.queryDuration > 0 && (
+            <div className="text-xs text-muted-foreground">
+              {stats.queryDuration}ms
             </div>
           )}
           
@@ -83,11 +97,27 @@ export function StatsSection() {
             <RefreshCw className={`h-4 w-4 ${stats.loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          
+          {/* (production) manual refresh */}
         </div>
 
         {stats.error && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-6 max-w-md mx-auto">
-            <p className="text-destructive text-sm">{stats.error}</p>
+          <div className={`border rounded-lg p-3 mb-6 max-w-md mx-auto ${
+            stats.isStale 
+              ? 'bg-orange-50/50 border-orange-200/30'
+              : 'bg-destructive/10 border-destructive/20'
+          }`}>
+            <p className={`text-sm flex items-center gap-2 ${
+              stats.isStale ? 'text-orange-700' : 'text-destructive'
+            }`}>
+              {stats.isStale && (
+                <>
+                  <span>⚠️</span>
+                  <span>Showing cached data - </span>
+                </>
+              )}
+              {stats.error}
+            </p>
           </div>
         )}
       </div>
@@ -118,15 +148,15 @@ export function StatsSection() {
       {/* Additional Metrics */}
       {stats.averageDonationSize > 0 && (
         <div className="mt-12 text-center">
-          <div className="bg-gradient-to-r from-accent/10 to-secondary/10 border border-accent/20 rounded-2xl p-6 max-w-md mx-auto">
+          <div className="bg-gradient-peach border border-peach/30 rounded-2xl p-6 max-w-md mx-auto">
             <h3 className="text-lg font-semibold text-foreground mb-2">Platform Impact</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <div className="text-2xl font-bold text-accent">{stats.averageDonationSize}</div>
+                <div className="text-2xl font-bold text-raspberry-red">{stats.averageDonationSize}</div>
                 <div className="text-muted-foreground">Avg. Donation Size</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-secondary">{stats.totalQuantityDonated}</div>
+                <div className="text-2xl font-bold text-mango-orange">{stats.totalQuantityDonated}</div>
                 <div className="text-muted-foreground">Total Quantity Donated</div>
               </div>
             </div>

@@ -12,8 +12,8 @@ export function AboutSection() {
         </div>
         
         <div className="grid md:grid-cols-3 gap-8">
-          <div className="bg-card rounded-2xl p-8 shadow-medium hover:shadow-strong transition-all duration-300 border border-primary/10">
-            <div className="h-16 w-16 rounded-xl bg-gradient-warm flex items-center justify-center mb-6">
+          <div className="bg-card rounded-2xl p-8 shadow-medium hover:shadow-strong transition-all duration-300 border border-raspberry-red/10">
+            <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-raspberry-red to-raspberry-red/80 flex items-center justify-center mb-6">
               <Utensils className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-xl font-semibold mb-3">Easy Donations</h3>
@@ -22,8 +22,8 @@ export function AboutSection() {
             </p>
           </div>
 
-          <div className="bg-card rounded-2xl p-8 shadow-medium hover:shadow-strong transition-all duration-300 border border-secondary/10">
-            <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-secondary to-secondary/80 flex items-center justify-center mb-6">
+          <div className="bg-card rounded-2xl p-8 shadow-medium hover:shadow-strong transition-all duration-300 border border-mango-orange/10">
+            <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-mango-orange to-mango-orange/80 flex items-center justify-center mb-6">
               <Users className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-xl font-semibold mb-3">Verified NGOs</h3>
@@ -32,8 +32,8 @@ export function AboutSection() {
             </p>
           </div>
 
-          <div className="bg-card rounded-2xl p-8 shadow-medium hover:shadow-strong transition-all duration-300 border border-accent/10">
-            <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center mb-6">
+          <div className="bg-card rounded-2xl p-8 shadow-medium hover:shadow-strong transition-all duration-300 border border-plum-purple/10">
+            <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-plum-purple to-plum-purple/80 flex items-center justify-center mb-6">
               <TrendingUp className="h-8 w-8 text-white" />
             </div>
             <h3 className="text-xl font-semibold mb-3">Track Impact</h3>

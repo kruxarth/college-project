@@ -12,30 +12,30 @@ export function ContactSection() {
 
       <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
         <div className="text-center group">
-          <div className="h-16 w-16 mx-auto mb-4 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-            <Mail className="h-8 w-8 text-primary" />
+          <div className="h-16 w-16 mx-auto mb-4 bg-raspberry-red/10 rounded-xl flex items-center justify-center group-hover:bg-raspberry-red/20 transition-colors">
+            <Mail className="h-8 w-8 text-raspberry-red" />
           </div>
           <h3 className="text-xl font-semibold mb-2">Email Us</h3>
           <p className="text-muted-foreground mb-2">Get in touch via email</p>
-          <a href="mailto:contact@nourish.com" className="text-primary hover:underline font-medium">
+          <a href="mailto:contact@nourish.com" className="text-raspberry-red hover:underline font-medium">
             contact@nourish.com
           </a>
         </div>
 
         <div className="text-center group">
-          <div className="h-16 w-16 mx-auto mb-4 bg-secondary/10 rounded-xl flex items-center justify-center group-hover:bg-secondary/20 transition-colors">
-            <Phone className="h-8 w-8 text-secondary" />
+          <div className="h-16 w-16 mx-auto mb-4 bg-mango-orange/10 rounded-xl flex items-center justify-center group-hover:bg-mango-orange/20 transition-colors">
+            <Phone className="h-8 w-8 text-mango-orange" />
           </div>
           <h3 className="text-xl font-semibold mb-2">Call Us</h3>
           <p className="text-muted-foreground mb-2">Speak with our team</p>
-          <a href="tel:+1234567890" className="text-secondary hover:underline font-medium">
+          <a href="tel:+1234567890" className="text-mango-orange hover:underline font-medium">
             +1 (234) 567-890
           </a>
         </div>
 
         <div className="text-center group">
-          <div className="h-16 w-16 mx-auto mb-4 bg-accent/10 rounded-xl flex items-center justify-center group-hover:bg-accent/20 transition-colors">
-            <MapPin className="h-8 w-8 text-accent" />
+          <div className="h-16 w-16 mx-auto mb-4 bg-plum-purple/10 rounded-xl flex items-center justify-center group-hover:bg-plum-purple/20 transition-colors">
+            <MapPin className="h-8 w-8 text-plum-purple" />
           </div>
           <h3 className="text-xl font-semibold mb-2">Visit Us</h3>
           <p className="text-muted-foreground mb-2">Come to our office</p>

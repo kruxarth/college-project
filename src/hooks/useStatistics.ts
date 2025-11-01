@@ -18,6 +18,8 @@ interface Statistics {
   loading: boolean;
   error: string | null;
   lastUpdated: Date | null;
+  isStale?: boolean;
+  queryDuration?: number;
 }
 
 export function useStatistics(refreshInterval = 30000) { // 30 seconds default
@@ -38,13 +40,15 @@ export function useStatistics(refreshInterval = 30000) { // 30 seconds default
     loading: true,
     error: null,
     lastUpdated: null,
+    isStale: false,
+    queryDuration: 0,
   });
 
-  const fetchStats = async () => {
+  const fetchStats = async (useCache = true) => {
     try {
       setStats(prev => ({ ...prev, loading: true, error: null }));
       
-      const statistics = await fs.getStatistics();
+      const statistics = await fs.getStatistics(useCache);
       
       setStats({
         totalDonations: statistics.totalDonations || 0,
@@ -61,15 +65,17 @@ export function useStatistics(refreshInterval = 30000) { // 30 seconds default
         thisMonthDonations: statistics.thisMonthDonations || 0,
         thisMonthUsers: statistics.thisMonthUsers || 0,
         loading: false,
-        error: null,
+        error: statistics.error || null,
         lastUpdated: new Date(),
+        isStale: statistics.isStale || false,
+        queryDuration: statistics.queryDuration || 0,
       });
     } catch (error) {
       console.error('Error loading statistics:', error);
       setStats(prev => ({
         ...prev,
         loading: false,
-        error: 'Failed to load statistics',
+        error: error instanceof Error ? error.message : 'Failed to load statistics',
       }));
     }
   };
@@ -82,14 +88,15 @@ export function useStatistics(refreshInterval = 30000) { // 30 seconds default
   // Set up automatic refresh
   useEffect(() => {
     if (refreshInterval > 0) {
-      const interval = setInterval(fetchStats, refreshInterval);
+      const interval = setInterval(() => fetchStats(true), refreshInterval);
       return () => clearInterval(interval);
     }
   }, [refreshInterval]);
 
-  // Manual refresh function
+  // Manual refresh function (force fresh data)
   const refresh = () => {
-    fetchStats();
+    fs.clearStatisticsCache(); // Clear cache to force fresh data
+    fetchStats(false);
   };
 
   return { stats, refresh };

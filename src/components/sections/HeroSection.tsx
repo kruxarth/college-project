@@ -23,7 +23,7 @@ export function HeroSection() {
               Sign up as Donor
             </Link>
           </Button>
-          <Button size="lg" variant="outline" className="text-lg h-16 px-10 border-2 hover:bg-secondary/10" asChild>
+          <Button size="lg" variant="outline" className="text-lg h-16 px-10 border-2 border-mango-orange text-mango-orange hover:bg-peach/20" asChild>
             <Link to="/signup?role=ngo">
               <Users className="mr-3 h-6 w-6" />
               Sign up as NGO

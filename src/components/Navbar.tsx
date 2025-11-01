@@ -56,9 +56,8 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-              <Heart className="h-6 w-6 text-primary fill-primary" />
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                FoodShare
+               <span className="bg-gradient-to-r from-raspberry-red to-mango-orange bg-clip-text text-transparent">
+                Nourish
               </span>
             </Link>
             <div className="hidden md:flex gap-1">
