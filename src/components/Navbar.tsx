@@ -20,18 +20,12 @@ export function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    const loadNotifications = async () => {
-      if (currentUser) {
-        try {
-          const notifications = await fs.getNotificationsForUser(currentUser.id);
-          setUnreadCount(notifications.filter(n => !n.isRead).length);
-        } catch (error) {
-          console.error('Error loading notifications:', error);
-        }
-      }
-    };
-
-    loadNotifications();
+    if (!currentUser) return;
+    // Subscribe to notifications in realtime
+    const unsubscribe = fs.subscribeToNotificationsForUser(currentUser.id, (notifications) => {
+      setUnreadCount(notifications.filter(n => !n.isRead).length);
+    });
+    return () => unsubscribe();
   }, [currentUser]);
 
   if (!currentUser || !user) return null;
@@ -73,14 +67,7 @@ export function Navbar() {
             <NotificationPanel 
               userId={currentUser.id} 
               unreadCount={unreadCount}
-              onUpdate={async () => {
-                try {
-                  const notifications = await fs.getNotificationsForUser(currentUser.id);
-                  setUnreadCount(notifications.filter(n => !n.isRead).length);
-                } catch (error) {
-                  console.error('Error updating notifications:', error);
-                }
-              }}
+              onUpdate={() => { /* unread count updates via subscription */ }}
             />
 
             <DropdownMenu>

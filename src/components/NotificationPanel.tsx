@@ -25,39 +25,27 @@ export function NotificationPanel({ userId, unreadCount, onUpdate }: Notificatio
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
-    const loadNotifications = async () => {
-      try {
-        const notifs = await fs.getNotificationsForUser(userId);
-        setNotifications(notifs);
-      } catch (error) {
-        console.error('Error loading notifications:', error);
-      }
-    };
-
-    if (userId) {
-      loadNotifications();
-    }
-  }, [userId, unreadCount]);
+    if (!userId) return;
+    // Realtime subscription for notifications list
+    const unsub = fs.subscribeToNotificationsForUser(userId, (notifs) => setNotifications(notifs));
+    return () => unsub();
+  }, [userId]);
 
   const markAsRead = async (notificationId: string) => {
     try {
       await fs.markNotificationAsRead(notificationId);
-      const updatedNotifs = await fs.getNotificationsForUser(userId);
-      setNotifications(updatedNotifs);
       onUpdate();
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      // ignore
     }
   };
 
   const markAllAsRead = async () => {
     try {
       await fs.markAllNotificationsAsRead(userId);
-      const updatedNotifs = await fs.getNotificationsForUser(userId);
-      setNotifications(updatedNotifs);
       onUpdate();
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      // ignore
     }
   };
 

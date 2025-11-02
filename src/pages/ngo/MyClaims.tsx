@@ -33,21 +33,33 @@ export default function MyClaims() {
 
   const handleMarkCollected = async (donationId: string) => {
     try {
-      await fs.updateDonation(donationId, { status: 'picked_up' });
+      // Mark as picked up and notify donor
+      await fs.updateDonationStatusAndNotify(
+        donationId,
+        'picked_up',
+        currentUser!.id,
+        currentUser!.email || 'NGO'
+      );
       // Refresh claims
       loadClaims();
     } catch (error) {
-      console.error('Error marking as collected:', error);
+      // silently ignore; UI will refresh on next load
     }
   };
 
   const handleMarkDelivered = async (donationId: string) => {
     try {
-      await fs.updateDonation(donationId, { status: 'completed' });
+      // Mark as completed and notify donor
+      await fs.updateDonationStatusAndNotify(
+        donationId,
+        'completed',
+        currentUser!.id,
+        currentUser!.email || 'NGO'
+      );
       // Refresh claims
       loadClaims();
     } catch (error) {
-      console.error('Error marking as delivered:', error);
+      // silently ignore; UI will refresh on next load
     }
   };
 

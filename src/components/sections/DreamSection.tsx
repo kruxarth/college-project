@@ -15,34 +15,34 @@ export function DreamSection() {
         </div>
         
         <div className="grid md:grid-cols-3 gap-8 mb-12">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center hover:bg-white transition-all duration-300 shadow-lg">
-            <div className="h-16 w-16 mx-auto mb-6 bg-orange-100 rounded-xl flex items-center justify-center">
-              <Globe className="h-8 w-8 text-orange-600" />
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center hover:bg-white hover:scale-105 hover:shadow-2xl transition-all duration-300 shadow-lg group cursor-pointer">
+            <div className="h-16 w-16 mx-auto mb-6 bg-orange-100 rounded-xl flex items-center justify-center group-hover:bg-orange-200 group-hover:scale-110 transition-all duration-300">
+              <Globe className="h-8 w-8 text-orange-600 group-hover:text-orange-700 transition-colors duration-300" />
             </div>
-            <h3 className="text-xl font-semibold mb-4 text-gray-900">Zero Food Waste</h3>
-            <p className="text-gray-600 leading-relaxed">
+            <h3 className="text-xl font-semibold mb-4 text-gray-900 group-hover:text-gray-800 transition-colors duration-300">Zero Food Waste</h3>
+            <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
               Creating a circular food economy where every piece of surplus food finds its way to someone in need, 
               eliminating waste at every level.
             </p>
           </div>
 
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center hover:bg-white transition-all duration-300 shadow-lg">
-            <div className="h-16 w-16 mx-auto mb-6 bg-orange-100 rounded-xl flex items-center justify-center">
-              <Target className="h-8 w-8 text-orange-600" />
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center hover:bg-white hover:scale-105 hover:shadow-2xl transition-all duration-300 shadow-lg group cursor-pointer">
+            <div className="h-16 w-16 mx-auto mb-6 bg-orange-100 rounded-xl flex items-center justify-center group-hover:bg-orange-200 group-hover:scale-110 transition-all duration-300">
+              <Target className="h-8 w-8 text-orange-600 group-hover:text-orange-700 transition-colors duration-300" />
             </div>
-            <h3 className="text-xl font-semibold mb-4 text-gray-900">Community Connection</h3>
-            <p className="text-gray-600 leading-relaxed">
+            <h3 className="text-xl font-semibold mb-4 text-gray-900 group-hover:text-gray-800 transition-colors duration-300">Community Connection</h3>
+            <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
               Strengthening communities by fostering meaningful relationships between donors, NGOs, and beneficiaries 
               through shared purpose.
             </p>
           </div>
 
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center hover:bg-white transition-all duration-300 shadow-lg">
-            <div className="h-16 w-16 mx-auto mb-6 bg-orange-100 rounded-xl flex items-center justify-center">
-              <Leaf className="h-8 w-8 text-orange-600" />
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center hover:bg-white hover:scale-105 hover:shadow-2xl transition-all duration-300 shadow-lg group cursor-pointer">
+            <div className="h-16 w-16 mx-auto mb-6 bg-orange-100 rounded-xl flex items-center justify-center group-hover:bg-orange-200 group-hover:scale-110 transition-all duration-300">
+              <Leaf className="h-8 w-8 text-orange-600 group-hover:text-orange-700 transition-colors duration-300" />
             </div>
-            <h3 className="text-xl font-semibold mb-4 text-gray-900">Sustainable Future</h3>
-            <p className="text-gray-600 leading-relaxed">
+            <h3 className="text-xl font-semibold mb-4 text-gray-900 group-hover:text-gray-800 transition-colors duration-300">Sustainable Future</h3>
+            <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
               Building a technology-driven solution that scales globally to end hunger and food waste, 
               creating lasting environmental impact.
             </p>
