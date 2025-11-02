@@ -84,9 +84,6 @@ export default function Login() {
                   Sign up
                 </Link>
               </p>
-              <p className="text-xs text-muted-foreground">
-                Demo: donor@example.com / ngo@example.com (password: password123)
-              </p>
             </div>
           </form>
         </CardContent>

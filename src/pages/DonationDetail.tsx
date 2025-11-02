@@ -33,6 +33,9 @@ export default function DonationDetail() {
   const [statusHistory, setStatusHistory] = useState<StatusHistory[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [claimSuccess, setClaimSuccess] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -49,11 +52,14 @@ export default function DonationDetail() {
   const loadUserProfile = async () => {
     if (!currentUser) return;
     
+    setProfileLoading(true);
     try {
       const profile = await fs.getUserProfile(currentUser.id);
       setUserProfile(profile);
     } catch (error) {
-      console.error('Error loading user profile:', error);
+      // silently ignore profile load errors; UX is handled via disabled claim button
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -61,14 +67,16 @@ export default function DonationDetail() {
     if (!id) return;
     
     try {
+      setLoading(true);
       const donationData = await fs.getDonationById(id);
+      setDonation(donationData);
+      
       if (donationData) {
-        setDonation(donationData);
         const history = await fs.getStatusHistory(id);
         setStatusHistory(history);
       }
     } catch (error) {
-      console.error('Error loading donation:', error);
+      // ignore load error; fallback UI will show Not Found if needed
     } finally {
       setLoading(false);
     }
@@ -79,7 +87,8 @@ export default function DonationDetail() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="container mx-auto px-4 py-8 text-center">
-          <div>Loading...</div>
+          <Package className="h-20 w-20 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <h1 className="text-2xl font-bold mb-2">Loading...</h1>
         </main>
       </div>
     );
@@ -100,8 +109,11 @@ export default function DonationDetail() {
 
   const isDonor = currentUser?.role === 'donor' && donation.donorId === currentUser.id;
   const isNgo = currentUser?.role === 'ngo';
-  const canClaim = isNgo && donation.status === 'available';
   const isClaimed = donation.claimedBy === currentUser?.id;
+  const canClaim = isNgo && donation.status === 'available' && !isClaimed;
+  
+  // Don't show claim button until profile is loaded
+  const canShowClaimButton = canClaim && userProfile && !profileLoading;
 
   const distance = isNgo && userProfile ? calculateDistance(
     userProfile.latitude,
@@ -111,8 +123,23 @@ export default function DonationDetail() {
   ) : 0;
 
   const handleClaim = async () => {
-    if (!currentUser || !donation || !userProfile) return;
-    
+    // Guard rails: bail out quietly if prerequisites aren't ready
+    if (!currentUser) {
+      toast.error('Please log in to claim this donation');
+      return;
+    }
+    if (!donation) {
+      // Should not happen on this page; quietly abort
+      return;
+    }
+    if (profileLoading || !userProfile) {
+      // Profile not ready yet – do not show error toast
+      return;
+    }
+
+    setClaiming(true);
+
+    // Phase 1: update main donation document. Only this determines success toast.
     try {
       await fs.updateDonation(donation.id, {
         status: 'claimed',
@@ -120,30 +147,39 @@ export default function DonationDetail() {
         claimedByName: userProfile.organizationName || userProfile.fullName,
         claimedAt: new Date().toISOString(),
       });
+    } catch (error) {
+      toast.error('Failed to claim donation. Please try again.');
+      setClaiming(false);
+      return;
+    }
 
-      await fs.addNotification({
+    // Phase 2: fire-and-forget side effects. Do not block success or show error popups.
+    Promise.allSettled([
+      fs.addNotification({
         userId: donation.donorId,
         title: 'Donation Claimed',
         message: `Your donation "${donation.foodName}" has been claimed by ${userProfile.organizationName || userProfile.fullName}`,
         type: 'donation_claimed',
         isRead: false,
         relatedDonationId: donation.id,
-      });
-
-      await fs.addStatusHistory({
+      }),
+      fs.addStatusHistory({
         donationId: donation.id,
         status: 'claimed',
         updatedBy: currentUser.id,
         updatedByName: userProfile.organizationName || userProfile.fullName,
         notes: 'Donation claimed',
-      });
+      })
+    ]);
 
-      toast.success('Donation claimed successfully!');
-      navigate('/ngo/my-claims');
-    } catch (error) {
-      console.error('Error claiming donation:', error);
-      toast.error('Failed to claim donation');
-    }
+    // UX: show lightweight inline success instead of popup
+    setClaimSuccess(true);
+
+    // Refresh on-page data (non-blocking) and navigate after a short delay
+  loadDonation().catch(() => {});
+    setTimeout(() => navigate('/ngo/my-claims'), 500);
+
+    setClaiming(false);
   };
 
   return (
@@ -221,78 +257,9 @@ export default function DonationDetail() {
                 </div>
               </CardContent>
             </Card>
-
-            {statusHistory.length > 0 && (
-              <Card className="shadow-medium">
-                <CardHeader>
-                  <CardTitle>Status History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {statusHistory.map(history => (
-                      <div key={history.id} className="flex gap-4 border-l-2 border-primary pl-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <StatusBadge status={history.status as any} />
-                            <span className="text-sm text-muted-foreground">
-                              {format(new Date(history.createdAt), 'PPp')}
-                            </span>
-                          </div>
-                          <p className="text-sm">Updated by {history.updatedByName}</p>
-                          {history.notes && (
-                            <p className="text-sm text-muted-foreground mt-1">{history.notes}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           <div className="space-y-6">
-            <Card className="shadow-medium">
-              <CardHeader>
-                <CardTitle>Pickup Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Expires</p>
-                    <p className="font-semibold">{format(new Date(donation.expiryTime), 'PPp')}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Pickup Window</p>
-                    <p className="font-semibold">
-                      {format(new Date(donation.pickupTimeStart), 'p')} - {format(new Date(donation.pickupTimeEnd), 'p')}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(donation.pickupTimeStart), 'PP')}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Address</p>
-                    <p className="font-semibold">{donation.pickupAddress}</p>
-                    {isNgo && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        📍 {formatDistance(distance)} away
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             <Card className="shadow-medium">
               <CardHeader>
                 <CardTitle>Contact Information</CardTitle>
@@ -330,11 +297,32 @@ export default function DonationDetail() {
               </CardContent>
             </Card>
 
-            {canClaim && (
+            {claimSuccess && (
+              <div className="rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 p-3 text-sm">
+                Donation claimed. Redirecting to your claims...
+              </div>
+            )}
+
+            {isNgo && profileLoading && (
+              <Card className="shadow-medium">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Package className="h-4 w-4 animate-pulse" />
+                    <span className="text-sm">Loading your profile...</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {canShowClaimButton && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button size="lg" className="w-full bg-gradient-warm">
-                    Claim This Donation
+                  <Button 
+                    size="lg" 
+                    className="w-full bg-gradient-warm"
+                    disabled={claiming || profileLoading}
+                  >
+                    {claiming ? 'Claiming...' : profileLoading ? 'Loading Profile...' : 'Claim This Donation'}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -342,16 +330,16 @@ export default function DonationDetail() {
                     <AlertDialogTitle>Claim Donation</AlertDialogTitle>
                     <AlertDialogDescription>
                       Are you sure you want to claim this donation? You'll be responsible for picking it up within the specified timeframe.
-                      <div className="mt-4 p-3 bg-muted rounded-lg space-y-2 text-sm">
-                        <p><strong>Pickup:</strong> {format(new Date(donation.pickupTimeStart), 'PPp')}</p>
-                        <p><strong>Contact:</strong> {donation.donorPhone}</p>
-                        <p><strong>Address:</strong> {donation.pickupAddress}</p>
-                      </div>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClaim}>Confirm Claim</AlertDialogAction>
+                    <AlertDialogAction 
+                      onClick={handleClaim}
+                      disabled={claiming}
+                    >
+                      {claiming ? 'Claiming...' : 'Confirm Claim'}
+                    </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

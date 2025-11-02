@@ -1,4 +1,4 @@
-import { collection, addDoc, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, getDoc, updateDoc, deleteDoc, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import type { Donation, User, Notification, StatusHistory } from '@/types';
 
@@ -18,9 +18,12 @@ export async function createDonation(donation: Omit<Donation, 'id' | 'createdAt'
     // Clear statistics cache when new donation is created
     clearStatisticsCache();
     
+    // Fire-and-forget: notify all NGOs about new available donation
+    notifyNGOsAboutNewDonation(createdDonation).catch(() => {});
+    
     return createdDonation;
   } catch (error) {
-    console.error('Error creating donation in Firestore:', error);
+    if (import.meta.env.DEV) console.error('Error creating donation in Firestore:', error);
     throw error;
   }
 }
@@ -31,6 +34,102 @@ export async function updateDonation(donationId: string, updates: Partial<Donati
   
   // Clear statistics cache when donation is updated
   clearStatisticsCache();
+}
+
+// Helper: fetch all NGO users (best-effort)
+export async function getAllNGOUsers() {
+  try {
+    const snaps = await getDocs(query(usersCol, where('role', '==', 'ngo')));
+    return snaps.docs.map(d => ({ id: d.id, ...(d.data() as User) }));
+  } catch (err) {
+    if (import.meta.env.DEV) console.error('Failed to load NGO users:', err);
+    return [] as User[];
+  }
+}
+
+// Notify NGOs when a new donation is created
+export async function notifyNGOsAboutNewDonation(donation: Donation) {
+  try {
+    // Only notify for available donations
+    if (donation.status !== 'available') return;
+    const ngos = await getAllNGOUsers();
+    if (!ngos.length) return;
+    const batch = ngos.map(ngo => addNotification({
+      userId: ngo.id,
+      title: 'New Donation Available',
+      message: `${donation.donorName} posted ${donation.foodName} (${donation.quantity} ${donation.quantityUnit}).`,
+      type: 'new_donation',
+      isRead: false,
+      relatedDonationId: donation.id,
+    }));
+    await Promise.allSettled(batch);
+  } catch (err) {
+    if (import.meta.env.DEV) console.error('Failed to notify NGOs for new donation:', err);
+  }
+}
+
+// Update status and notify donor about progress (after claim)
+export async function updateDonationStatusAndNotify(
+  donationId: string,
+  newStatus: Donation['status'],
+  updatedBy: string,
+  updatedByName: string,
+  notes?: string
+) {
+  // Fetch current donation to know recipients and context
+  const donation = await getDonationById(donationId);
+  if (!donation) throw new Error('Donation not found');
+
+  // Update status
+  await updateDonation(donationId, { status: newStatus });
+
+  // Add status history
+  await addStatusHistory({
+    donationId,
+    status: newStatus,
+    updatedBy,
+    updatedByName,
+    notes: notes || '',
+  });
+
+  // Notify donor for each step after claiming
+  try {
+    const donorId = donation.donorId;
+    let title = 'Donation Update';
+    let message = `Your donation "${donation.foodName}" status changed to ${newStatus}.`;
+
+    switch (newStatus) {
+      case 'on_the_way':
+        title = 'Pickup In Progress';
+        message = `NGO is on the way to pick up "${donation.foodName}".`;
+        break;
+      case 'picked_up':
+        title = 'Donation Picked Up';
+        message = `Your donation "${donation.foodName}" has been picked up.`;
+        break;
+      case 'completed':
+        title = 'Donation Completed';
+        message = `Your donation "${donation.foodName}" has been delivered to those in need. Thank you!`;
+        break;
+      case 'cancelled':
+        title = 'Donation Cancelled';
+        message = `Your donation "${donation.foodName}" was cancelled.`;
+        break;
+      default:
+        break;
+    }
+
+    await addNotification({
+      userId: donorId,
+      title,
+      message,
+      type: 'status_update',
+      isRead: false,
+      relatedDonationId: donationId,
+    });
+  } catch (err) {
+    if (import.meta.env.DEV) console.error('Failed to send status update notification:', err);
+  }
 }
 
 export async function deleteDonation(donationId: string) {
@@ -58,7 +157,7 @@ export async function getDonationsByClaimer(userId: string) {
     const snaps = await getDocs(q);
     return snaps.docs.map(d => ({ id: d.id, ...(d.data() as Donation) }));
   } catch (error: any) {
-    console.log('Compound index not available for claims, using fallback method...');
+    if (import.meta.env.DEV) console.log('Compound index not available for claims, using fallback method...');
     
     // Fallback: simple query without orderBy
     try {
@@ -69,15 +168,15 @@ export async function getDonationsByClaimer(userId: string) {
       // Sort in memory
       donations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-      console.log(`✅ Found ${donations.length} claimed donations (sorted in memory)`);
+      if (import.meta.env.DEV) console.log(`✅ Found ${donations.length} claimed donations (sorted in memory)`);
       return donations;
     } catch (fallbackError) {
-      console.error('Simple query also failed, using manual filter...');
+      if (import.meta.env.DEV) console.error('Simple query also failed, using manual filter...');
       
       // Last resort: get all donations and filter manually
       const allDonations = await getAllDonations();
       const claimedDonations = allDonations.filter(d => d.claimedBy === userId);
-      console.log(`✅ Found ${claimedDonations.length} claimed donations (manual filter)`);
+      if (import.meta.env.DEV) console.log(`✅ Found ${claimedDonations.length} claimed donations (manual filter)`);
       return claimedDonations;
     }
   }
@@ -96,7 +195,7 @@ export async function getAvailableDonations() {
     const snaps = await getDocs(q);
     return snaps.docs.map(d => ({ id: d.id, ...(d.data() as Donation) }));
   } catch (error: any) {
-    console.error('Error with ordered query, trying without orderBy:', error);
+    if (import.meta.env.DEV) console.error('Error with ordered query, trying without orderBy:', error);
     
     // If compound index doesn't exist, try without orderBy
     try {
@@ -107,10 +206,10 @@ export async function getAvailableDonations() {
       // Sort in memory instead
       donations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-      console.log(`✅ Found ${donations.length} available donations (sorted in memory)`);
+      if (import.meta.env.DEV) console.log(`✅ Found ${donations.length} available donations (sorted in memory)`);
       return donations;
     } catch (fallbackError) {
-      console.error('Error even with simple query:', fallbackError);
+      if (import.meta.env.DEV) console.error('Error even with simple query:', fallbackError);
       throw fallbackError;
     }
   }
@@ -123,7 +222,7 @@ export async function getAvailableDonationsBasic() {
     const availableDonations = allDonations.filter(d => d.status === 'available');
     return availableDonations;
   } catch (error) {
-    console.error('Error in fallback method:', error);
+    if (import.meta.env.DEV) console.error('Error in fallback method:', error);
     throw error;
   }
 }
@@ -134,7 +233,7 @@ export async function testFirestoreConnection() {
     const snapshot = await getDocs(testQuery);
     return { success: true, count: snapshot.docs.length };
   } catch (error: any) {
-    console.error('Firestore connection failed:', error);
+    if (import.meta.env.DEV) console.error('Firestore connection failed:', error);
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
@@ -178,9 +277,53 @@ export async function addNotification(notification: Omit<Notification, 'id' | 'c
 }
 
 export async function getNotificationsForUser(userId: string) {
-  const q = query(notificationsCol, where('userId', '==', userId), orderBy('createdAt', 'desc'));
-  const snaps = await getDocs(q);
-  return snaps.docs.map(d => ({ id: d.id, ...(d.data() as Notification) }));
+  // Try ordered query first; if index missing, fallback to simple and sort in-memory
+  try {
+    const qOrdered = query(notificationsCol, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    const snaps = await getDocs(qOrdered);
+    return snaps.docs.map(d => ({ id: d.id, ...(d.data() as Notification) }));
+  } catch {
+    const qSimple = query(notificationsCol, where('userId', '==', userId));
+    const snaps = await getDocs(qSimple);
+    const notifs = snaps.docs.map(d => ({ id: d.id, ...(d.data() as Notification) }));
+    // Sort newest first (ISO string sorts lexicographically by time)
+    notifs.sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    return notifs as Notification[];
+  }
+}
+
+// Realtime subscription to user notifications. Returns unsubscribe function.
+export function subscribeToNotificationsForUser(
+  userId: string,
+  onChange: (notifications: Notification[]) => void
+) {
+  const qOrdered = query(notificationsCol, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+  const qSimple = query(notificationsCol, where('userId', '==', userId));
+
+  let activeUnsub: (() => void) | null = null;
+
+  const attach = (qAny: any, sortClient: boolean) => {
+    if (activeUnsub) activeUnsub();
+    activeUnsub = onSnapshot(qAny, (snaps) => {
+      let notifs = snaps.docs.map(d => ({ id: d.id, ...(d.data() as Notification) }));
+      if (sortClient) {
+        (notifs as any).sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      }
+      onChange(notifs as Notification[]);
+    }, (err) => {
+      // Fallback to simple subscription without orderBy (avoids composite index requirement)
+      if (qAny === qOrdered) {
+        attach(qSimple, true);
+      }
+    });
+  };
+
+  // Try ordered first
+  attach(qOrdered, false);
+
+  return () => {
+    if (activeUnsub) activeUnsub();
+  };
 }
 
 export async function markNotificationAsRead(notificationId: string) {
@@ -224,7 +367,7 @@ export async function getDonationsByDonor(donorId: string) {
     
     return donations;
   } catch (error) {
-    console.error('Error fetching donations by donor:', error);
+    if (import.meta.env.DEV) console.error('Error fetching donations by donor:', error);
     throw error;
   }
 }
@@ -363,7 +506,7 @@ export async function getStatistics(useCache: boolean = true) {
     };
     return statisticsData;
   } catch (error) {
-    console.error('Error fetching statistics:', error);
+    if (import.meta.env.DEV) console.error('Error fetching statistics:', error);
     
     // If we have cached data and fresh fetch fails, return cached data
     if (statisticsCache) {
