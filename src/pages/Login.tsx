@@ -13,6 +13,9 @@ export default function Login() {
   const { login } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const { resetPassword } = useAuth();
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -76,6 +79,28 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Logging in...' : 'Login'}
             </Button>
+
+            <div className="flex items-center justify-between mt-2">
+              <button type="button" className="text-sm text-primary hover:underline" onClick={() => { setShowReset(s => !s); setResetEmail(formData.email); }}>
+                Forgot password?
+              </button>
+            </div>
+
+            {showReset && (
+              <div className="mt-4 space-y-2">
+                <Label htmlFor="resetEmail">Enter email to reset password</Label>
+                <Input id="resetEmail" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={async () => {
+                    if (!resetEmail) { toast.error('Please enter your email'); return; }
+                    const res = await resetPassword(resetEmail);
+                    if (res.success) { toast.success('Password reset email sent'); setShowReset(false); }
+                    else { toast.error(res.error || 'Failed to send reset email'); }
+                  }}>Send reset email</Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowReset(false)}>Cancel</Button>
+                </div>
+              </div>
+            )}
 
             <div className="text-center space-y-2">
               <p className="text-sm text-muted-foreground">

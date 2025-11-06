@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { User, CurrentUser, SignupData } from '@/types';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import { auth } from '@/firebase/config';
 import * as fs from '@/services/firestore';
 
@@ -9,6 +9,8 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; role?: string }>;
   signup: (userData: SignupData) => Promise<{ success: boolean; error?: string; role?: string }>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   isLoading: boolean;
@@ -89,8 +91,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to send password reset email' };
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const current = auth.currentUser;
+      if (!current || !current.email) return { success: false, error: 'No authenticated user' };
+      const cred = EmailAuthProvider.credential(current.email, currentPassword);
+      await reauthenticateWithCredential(current, cred);
+      await updatePassword(current, newPassword);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to change password' };
+    }
+  };
+
   const signup = async (userData: SignupData): Promise<{ success: boolean; error?: string; role?: string }> => {
     try {
+      // validate phone: if provided, must be exactly 10 digits
+      if (userData.phone && !/^\d{10}$/.test(userData.phone)) {
+        return { success: false, error: 'Phone number must be exactly 10 digits' };
+      }
       const cred = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
       const uid = cred.user.uid;
       // create Firestore profile (don't store password)
@@ -113,6 +141,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (updates: Partial<User>) => {
     if (currentUser) {
+      if (updates.phone && !/^\d{10}$/.test(updates.phone)) {
+        // reject invalid phone updates
+        return;
+      }
       await fs.updateUserProfile(currentUser.id, updates);
       const updated = await fs.getUserProfile(currentUser.id);
       setUser(updated as User | null);
@@ -120,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, user, login, signup, logout, updateProfile, isLoading }}>
+    <AuthContext.Provider value={{ currentUser, user, login, signup, logout, updateProfile, isLoading, resetPassword, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

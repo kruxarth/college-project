@@ -31,6 +31,13 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    // Sanitize phone input to digits-only and limit to 10 characters
+    if (e.target.name === 'phone') {
+      const raw = e.target.value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({ ...prev, phone: raw }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
@@ -44,6 +51,12 @@ export default function SignUp() {
 
     if (formData.password.length < 6) {
       toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    // Validate phone is exactly 10 digits
+    if (!/^\d{10}$/.test(formData.phone)) {
+      toast.error('Phone number must be exactly 10 digits');
       return;
     }
 
@@ -161,6 +174,10 @@ export default function SignUp() {
                 id="phone"
                 name="phone"
                 type="tel"
+                inputMode="numeric"
+                pattern="\d{10}"
+                maxLength={10}
+                placeholder="10-digit mobile number"
                 required
                 value={formData.phone}
                 onChange={handleChange}
