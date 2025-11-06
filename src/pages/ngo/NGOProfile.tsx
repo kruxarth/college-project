@@ -39,6 +39,69 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import type { User as UserType } from '@/types';
 
+const ChangePasswordSection: React.FC = () => {
+  const { changePassword } = useAuth();
+  const [show, setShow] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = async () => {
+    if (newPassword.length < 6) {
+      toast({ title: 'Error', description: 'New password must be at least 6 characters', variant: 'destructive' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: 'Error', description: 'New passwords do not match', variant: 'destructive' });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await changePassword(currentPassword, newPassword);
+      if (res.success) {
+        toast({ title: 'Success', description: 'Password changed successfully' });
+        setShow(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        toast({ title: 'Error', description: res.error || 'Failed to change password', variant: 'destructive' });
+      }
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to change password', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!show) {
+    return (
+      <div className="flex items-center justify-between py-2">
+        <div>
+          <h4 className="font-medium">Change Password</h4>
+          <p className="text-sm text-gray-600">Update your account password</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setShow(true)}>Change</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 py-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <Input type="password" placeholder="Current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+        <Input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+        <Input type="password" placeholder="Confirm new" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" onClick={handleChange} disabled={loading}>{loading ? 'Updating...' : 'Update Password'}</Button>
+        <Button size="sm" variant="outline" onClick={() => setShow(false)}>Cancel</Button>
+      </div>
+    </div>
+  );
+};
+
 const NGOProfile = () => {
   const { user, updateProfile, currentUser } = useAuth();
   const ngoStats = useNGOStats(currentUser?.id || null);
@@ -552,13 +615,7 @@ const NGOProfile = () => {
                 
                 <Separator />
                 
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <h4 className="font-medium">Change Password</h4>
-                    <p className="text-sm text-gray-600">Update your account password</p>
-                  </div>
-                  <Button variant="outline" size="sm">Change</Button>
-                </div>
+                <ChangePasswordSection />
                 
                 <Separator />
                 
