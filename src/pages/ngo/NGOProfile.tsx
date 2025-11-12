@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/StatusBadge';
 import { DonationCard } from '@/components/DonationCard';
+import EmailSettings from '@/components/EmailSettings';
 import { 
   User, 
   Mail, 
@@ -572,34 +573,40 @@ const NGOProfile = () => {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
+            {/* Email Settings Card */}
+            <EmailSettings />
+            
+            {/* Organization Settings Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Account Settings
+                  <Building2 className="h-5 w-5" />
+                  Organization Settings
                 </CardTitle>
                 <CardDescription>
-                  Manage your organization's account preferences and security
+                  Manage your organization preferences
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between py-2">
                   <div>
-                    <h4 className="font-medium">Email Notifications</h4>
-                    <p className="text-sm text-gray-600">Receive updates about new donations</p>
-                  </div>
-                  <Button variant="outline" size="sm">Configure</Button>
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between py-2">
-                  <div>
                     <h4 className="font-medium">Organization Verification</h4>
                     <p className="text-sm text-gray-600">Get verified to increase donor trust</p>
                   </div>
-                  <Button variant="outline" size="sm">
-                    {user.isVerified ? 'Verified' : 'Verify Now'}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    disabled={user.isVerified}
+                    onClick={() => {
+                      if (!user.isVerified) {
+                        toast({
+                          title: "Verification Request",
+                          description: "Please contact support to verify your organization.",
+                        });
+                      }
+                    }}
+                  >
+                    {user.isVerified ? 'Verified ✓' : 'Request Verification'}
                   </Button>
                 </div>
                 
@@ -610,21 +617,60 @@ const NGOProfile = () => {
                     <h4 className="font-medium">Privacy Settings</h4>
                     <p className="text-sm text-gray-600">Control visibility of your organization</p>
                   </div>
-                  <Button variant="outline" size="sm">Manage</Button>
+                  <Button variant="outline" size="sm" disabled>
+                    Coming Soon
+                  </Button>
                 </div>
-                
-                <Separator />
-                
+              </CardContent>
+            </Card>
+
+            {/* Security Settings Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Security Settings
+                </CardTitle>
+                <CardDescription>
+                  Manage your account security and password
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <ChangePasswordSection />
-                
-                <Separator />
-                
+              </CardContent>
+            </Card>
+
+            {/* Danger Zone Card */}
+            <Card className="border-red-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600">
+                  <Shield className="h-5 w-5" />
+                  Danger Zone
+                </CardTitle>
+                <CardDescription>
+                  Irreversible actions for your account
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <h4 className="font-medium text-red-600">Delete Account</h4>
-                    <p className="text-sm text-gray-600">Permanently delete your organization account</p>
+                    <p className="text-sm text-gray-600">Permanently delete your organization account and all data</p>
                   </div>
-                  <Button variant="destructive" size="sm">Delete</Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.')) {
+                        toast({
+                          title: "Feature Coming Soon",
+                          description: "Account deletion will be available in a future update.",
+                        });
+                      }
+                    }}
+                  >
+                    Delete Account
+                  </Button>
                 </div>
               </CardContent>
             </Card>

@@ -82,6 +82,7 @@ export default function SignUp() {
 
     if (result.success) {
       toast.success('Account created successfully!');
+      toast.info('Please check your email to verify your account', { duration: 5000 });
       navigate(`/${role}/dashboard`);
     } else {
       toast.error(result.error || 'Failed to create account');
