@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/StatusBadge';
 import { DonationCard } from '@/components/DonationCard';
+import EmailSettings from '@/components/EmailSettings';
 import { 
   User, 
   Mail, 
@@ -495,47 +496,68 @@ const DonorProfile = () => {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
+            {/* Email Settings Card */}
+            <EmailSettings />
+            
+            {/* Account Security Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Security Settings
+                </CardTitle>
+                <CardDescription>
+                  Manage your account security and password
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ChangePasswordSection />
+              </CardContent>
+            </Card>
+
+            {/* Other Settings Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  Account Settings
+                  Other Settings
                 </CardTitle>
                 <CardDescription>
-                  Manage your account preferences and security
+                  Additional account preferences
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between py-2">
                   <div>
-                    <h4 className="font-medium">Email Notifications</h4>
-                    <p className="text-sm text-gray-600">Receive updates about your donations</p>
-                  </div>
-                  <Button variant="outline" size="sm">Configure</Button>
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between py-2">
-                  <div>
                     <h4 className="font-medium">Privacy Settings</h4>
                     <p className="text-sm text-gray-600">Control who can see your profile</p>
                   </div>
-                  <Button variant="outline" size="sm">Manage</Button>
+                  <Button variant="outline" size="sm" disabled>
+                    Coming Soon
+                  </Button>
                 </div>
-                
-                <Separator />
-                
-                <ChangePasswordSection />
                 
                 <Separator />
                 
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <h4 className="font-medium text-red-600">Delete Account</h4>
-                    <p className="text-sm text-gray-600">Permanently delete your account</p>
+                    <p className="text-sm text-gray-600">Permanently delete your account and all data</p>
                   </div>
-                  <Button variant="destructive" size="sm">Delete</Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                        toast({
+                          title: "Feature Coming Soon",
+                          description: "Account deletion will be available in a future update.",
+                        });
+                      }
+                    }}
+                  >
+                    Delete
+                  </Button>
                 </div>
               </CardContent>
             </Card>

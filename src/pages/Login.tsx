@@ -16,6 +16,7 @@ export default function Login() {
   const { resetPassword } = useAuth();
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -91,12 +92,17 @@ export default function Login() {
                 <Label htmlFor="resetEmail">Enter email to reset password</Label>
                 <Input id="resetEmail" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={async () => {
+                  <Button size="sm" disabled={resetLoading} onClick={async () => {
                     if (!resetEmail) { toast.error('Please enter your email'); return; }
+                    setResetLoading(true);
                     const res = await resetPassword(resetEmail);
-                    if (res.success) { toast.success('Password reset email sent'); setShowReset(false); }
+                    setResetLoading(false);
+                    if (res.success) { 
+                      toast.success('Password reset email sent! Check your inbox.'); 
+                      setShowReset(false); 
+                    }
                     else { toast.error(res.error || 'Failed to send reset email'); }
-                  }}>Send reset email</Button>
+                  }}>{resetLoading ? 'Sending...' : 'Send reset email'}</Button>
                   <Button size="sm" variant="outline" onClick={() => setShowReset(false)}>Cancel</Button>
                 </div>
               </div>

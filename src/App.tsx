@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import AuthenticatedLayout from "@/components/AuthenticatedLayout";
 import { useEffect } from "react";
 import { initializeDemoData } from "@/utils/initData";
 
@@ -37,28 +38,30 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/signup" element={<SignUp />} />
-              <Route path="/login" element={<Login />} />
-              
-              {/* Donor Routes */}
-              <Route path="/donor/dashboard" element={<ProtectedRoute requireRole="donor"><DonorDashboard /></ProtectedRoute>} />
-              <Route path="/donor/create-donation" element={<ProtectedRoute requireRole="donor"><CreateDonation /></ProtectedRoute>} />
-              <Route path="/donor/donations" element={<ProtectedRoute requireRole="donor"><ManageDonations /></ProtectedRoute>} />
-              <Route path="/donor/profile" element={<ProtectedRoute requireRole="donor"><DonorProfile /></ProtectedRoute>} />
-              
-              {/* NGO Routes */}
-              <Route path="/ngo/dashboard" element={<ProtectedRoute requireRole="ngo"><NgoDashboard /></ProtectedRoute>} />
-              <Route path="/ngo/browse" element={<ProtectedRoute requireRole="ngo"><BrowseDonations /></ProtectedRoute>} />
-              <Route path="/ngo/my-claims" element={<ProtectedRoute requireRole="ngo"><MyClaims /></ProtectedRoute>} />
-              <Route path="/ngo/profile" element={<ProtectedRoute requireRole="ngo"><NGOProfile /></ProtectedRoute>} />
-              
-              {/* Shared Routes */}
-              <Route path="/donation/:id" element={<ProtectedRoute><DonationDetail /></ProtectedRoute>} />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AuthenticatedLayout>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/signup" element={<SignUp />} />
+                <Route path="/login" element={<Login />} />
+                
+                {/* Donor Routes */}
+                <Route path="/donor/dashboard" element={<ProtectedRoute requireRole="donor"><DonorDashboard /></ProtectedRoute>} />
+                <Route path="/donor/create-donation" element={<ProtectedRoute requireRole="donor"><CreateDonation /></ProtectedRoute>} />
+                <Route path="/donor/donations" element={<ProtectedRoute requireRole="donor"><ManageDonations /></ProtectedRoute>} />
+                <Route path="/donor/profile" element={<ProtectedRoute requireRole="donor"><DonorProfile /></ProtectedRoute>} />
+                
+                {/* NGO Routes */}
+                <Route path="/ngo/dashboard" element={<ProtectedRoute requireRole="ngo"><NgoDashboard /></ProtectedRoute>} />
+                <Route path="/ngo/browse" element={<ProtectedRoute requireRole="ngo"><BrowseDonations /></ProtectedRoute>} />
+                <Route path="/ngo/my-claims" element={<ProtectedRoute requireRole="ngo"><MyClaims /></ProtectedRoute>} />
+                <Route path="/ngo/profile" element={<ProtectedRoute requireRole="ngo"><NGOProfile /></ProtectedRoute>} />
+                
+                {/* Shared Routes */}
+                <Route path="/donation/:id" element={<ProtectedRoute><DonationDetail /></ProtectedRoute>} />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AuthenticatedLayout>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
