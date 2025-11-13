@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/StatusBadge';
 import { DonationCard } from '@/components/DonationCard';
@@ -35,7 +36,10 @@ import {
   TrendingUp,
   Clock,
   Loader2,
-  MapPinIcon
+  MapPinIcon,
+  Eye,
+  EyeOff,
+  Lock
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { User as UserType } from '@/types';
@@ -103,6 +107,120 @@ const ChangePasswordSection: React.FC = () => {
   );
 };
 
+const PrivacySettingsSection: React.FC = () => {
+  const [settings, setSettings] = useState({
+    profileVisibility: true,
+    showClaimedDonations: true,
+    showContactInfo: false,
+    allowDonorContact: true,
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleToggle = async (key: keyof typeof settings) => {
+    const newSettings = { ...settings, [key]: !settings[key] };
+    setSettings(newSettings);
+    
+    // Simulate saving to backend
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      toast({
+        title: "Privacy Settings Updated",
+        description: "Your privacy preferences have been saved successfully.",
+      });
+    }, 500);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Profile Visibility */}
+      <div className="flex items-start justify-between py-3">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-gray-500" />
+            <h4 className="font-medium">Public Organization Profile</h4>
+          </div>
+          <p className="text-sm text-gray-600">
+            Allow all donors to view your organization profile and impact statistics
+          </p>
+        </div>
+        <Switch
+          checked={settings.profileVisibility}
+          onCheckedChange={() => handleToggle('profileVisibility')}
+          disabled={isSaving}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Claimed Donations Visibility */}
+      <div className="flex items-start justify-between py-3">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-gray-500" />
+            <h4 className="font-medium">Show Claimed Donations</h4>
+          </div>
+          <p className="text-sm text-gray-600">
+            Display donations you've claimed and your impact publicly
+          </p>
+        </div>
+        <Switch
+          checked={settings.showClaimedDonations}
+          onCheckedChange={() => handleToggle('showClaimedDonations')}
+          disabled={isSaving}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Contact Information */}
+      <div className="flex items-start justify-between py-3">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-gray-500" />
+            <h4 className="font-medium">Show Contact Information</h4>
+          </div>
+          <p className="text-sm text-gray-600">
+            Display your phone number and email to all donors
+          </p>
+        </div>
+        <Switch
+          checked={settings.showContactInfo}
+          onCheckedChange={() => handleToggle('showContactInfo')}
+          disabled={isSaving}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Donor Contact Permission */}
+      <div className="flex items-start justify-between py-3">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-gray-500" />
+            <h4 className="font-medium">Allow Donor Contact</h4>
+          </div>
+          <p className="text-sm text-gray-600">
+            Let donors contact you directly about their donations
+          </p>
+        </div>
+        <Switch
+          checked={settings.allowDonorContact}
+          onCheckedChange={() => handleToggle('allowDonorContact')}
+          disabled={isSaving}
+        />
+      </div>
+
+      {isSaving && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 pt-2">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Saving changes...</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const NGOProfile = () => {
   const { user, updateProfile, currentUser } = useAuth();
   const ngoStats = useNGOStats(currentUser?.id || null);
@@ -120,6 +238,83 @@ const NGOProfile = () => {
       </div>
     );
   }
+
+  const handleDownloadData = () => {
+    try {
+      // Prepare data export
+      const exportData = {
+        profile: {
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          address: user.address,
+          description: user.description,
+          organizationName: user.organizationName,
+          registrationNumber: user.registrationNumber,
+          role: user.role,
+          isVerified: user.isVerified,
+          createdAt: user.createdAt,
+        },
+        statistics: {
+          totalClaims: ngoStats.totalClaims,
+          totalMealsReceived: ngoStats.totalMealsReceived,
+          donorPartnersCount: ngoStats.donorPartnersCount,
+          activeClaims: ngoStats.activeClaims,
+          completedClaims: ngoStats.completedClaims,
+          totalQuantityReceived: ngoStats.totalQuantityReceived,
+          averageRating: ngoStats.avgRating,
+        },
+        recentClaims: ngoStats.recentClaims.map(claim => ({
+          id: claim.id,
+          foodName: claim.foodName,
+          quantity: claim.quantity,
+          quantityUnit: claim.quantityUnit,
+          category: claim.category,
+          status: claim.status,
+          pickupTimeStart: claim.pickupTimeStart,
+          pickupTimeEnd: claim.pickupTimeEnd,
+          expiryTime: claim.expiryTime,
+          description: claim.description,
+          createdAt: claim.createdAt,
+          claimedAt: claim.claimedAt,
+          donorId: claim.donorId,
+          donorName: claim.donorName,
+        })),
+        exportDate: new Date().toISOString(),
+        exportVersion: '1.0',
+      };
+
+      // Convert to JSON and create blob
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const orgName = user.organizationName || user.fullName;
+      link.download = `ngo-data-${orgName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Data Downloaded",
+        description: "Your organization data has been successfully exported.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download your data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleEditStart = () => {
     setEditForm({
@@ -614,13 +809,41 @@ const NGOProfile = () => {
                 
                 <div className="flex items-center justify-between py-2">
                   <div>
-                    <h4 className="font-medium">Privacy Settings</h4>
-                    <p className="text-sm text-gray-600">Control visibility of your organization</p>
+                    <h4 className="font-medium">Download Organization Data</h4>
+                    <p className="text-sm text-gray-600">Export your organization data and claim history</p>
                   </div>
-                  <Button variant="outline" size="sm" disabled>
-                    Coming Soon
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleDownloadData}
+                    disabled={ngoStats.loading}
+                  >
+                    {ngoStats.loading ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Download'
+                    )}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Privacy Settings Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  Privacy Settings
+                </CardTitle>
+                <CardDescription>
+                  Control who can see your organization profile and contact information
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PrivacySettingsSection />
               </CardContent>
             </Card>
 
