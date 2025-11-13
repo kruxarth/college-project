@@ -13,11 +13,6 @@ export default function EmailVerificationBanner() {
   const [lastSendTime, setLastSendTime] = useState<number>(0);
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
 
-  // Don't show if email is verified or user dismissed
-  if (isEmailVerified || dismissed) {
-    return null;
-  }
-
   // Update cooldown timer
   useEffect(() => {
     if (cooldownRemaining > 0) {
@@ -27,6 +22,11 @@ export default function EmailVerificationBanner() {
       return () => clearTimeout(timer);
     }
   }, [cooldownRemaining]);
+
+  // Don't show if email is verified or user dismissed
+  if (isEmailVerified || dismissed) {
+    return null;
+  }
 
   const handleSendVerification = async () => {
     // Check cooldown (60 seconds between sends)

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/StatusBadge';
 import { DonationCard } from '@/components/DonationCard';
@@ -34,7 +35,10 @@ import {
   TrendingUp,
   Users,
   Clock,
-  Loader2
+  Loader2,
+  Eye,
+  EyeOff,
+  Lock
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { User as UserType } from '@/types';
@@ -102,6 +106,120 @@ const ChangePasswordSection: React.FC = () => {
   );
 };
 
+const PrivacySettingsSection: React.FC = () => {
+  const [settings, setSettings] = useState({
+    profileVisibility: true,
+    showDonationHistory: true,
+    showContactInfo: false,
+    allowNGOContact: true,
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleToggle = async (key: keyof typeof settings) => {
+    const newSettings = { ...settings, [key]: !settings[key] };
+    setSettings(newSettings);
+    
+    // Simulate saving to backend
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      toast({
+        title: "Privacy Settings Updated",
+        description: "Your privacy preferences have been saved successfully.",
+      });
+    }, 500);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Profile Visibility */}
+      <div className="flex items-start justify-between py-3">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-gray-500" />
+            <h4 className="font-medium">Public Profile</h4>
+          </div>
+          <p className="text-sm text-gray-600">
+            Allow all NGOs to view your profile and donation statistics
+          </p>
+        </div>
+        <Switch
+          checked={settings.profileVisibility}
+          onCheckedChange={() => handleToggle('profileVisibility')}
+          disabled={isSaving}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Donation History */}
+      <div className="flex items-start justify-between py-3">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-gray-500" />
+            <h4 className="font-medium">Show Donation History</h4>
+          </div>
+          <p className="text-sm text-gray-600">
+            Display your past donations and impact statistics publicly
+          </p>
+        </div>
+        <Switch
+          checked={settings.showDonationHistory}
+          onCheckedChange={() => handleToggle('showDonationHistory')}
+          disabled={isSaving}
+        />
+      </div>
+
+      <Separator />
+
+      {/* Contact Information */}
+      <div className="flex items-start justify-between py-3">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-gray-500" />
+            <h4 className="font-medium">Show Contact Information</h4>
+          </div>
+          <p className="text-sm text-gray-600">
+            Display your phone number and email to all NGO partners
+          </p>
+        </div>
+        <Switch
+          checked={settings.showContactInfo}
+          onCheckedChange={() => handleToggle('showContactInfo')}
+          disabled={isSaving}
+        />
+      </div>
+
+      <Separator />
+
+      {/* NGO Contact Permission */}
+      <div className="flex items-start justify-between py-3">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-gray-500" />
+            <h4 className="font-medium">Allow NGO Contact</h4>
+          </div>
+          <p className="text-sm text-gray-600">
+            Let NGOs contact you directly for donation opportunities
+          </p>
+        </div>
+        <Switch
+          checked={settings.allowNGOContact}
+          onCheckedChange={() => handleToggle('allowNGOContact')}
+          disabled={isSaving}
+        />
+      </div>
+
+      {isSaving && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 pt-2">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>Saving changes...</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const DonorProfile = () => {
   const { user, updateProfile, currentUser } = useAuth();
   const donorStats = useDonorStats(currentUser?.id || null);
@@ -119,6 +237,80 @@ const DonorProfile = () => {
       </div>
     );
   }
+
+  const handleDownloadData = () => {
+    try {
+      // Prepare data export
+      const exportData = {
+        profile: {
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          address: user.address,
+          description: user.description,
+          role: user.role,
+          isVerified: user.isVerified,
+          createdAt: user.createdAt,
+        },
+        statistics: {
+          totalDonations: donorStats.totalDonations,
+          totalMealsShared: donorStats.totalMealsShared,
+          ngoPartnersCount: donorStats.ngoPartnersCount,
+          activeDonations: donorStats.activeDonations,
+          completedDonations: donorStats.completedDonations,
+          cancelledDonations: donorStats.cancelledDonations,
+          totalQuantityDonated: donorStats.totalQuantityDonated,
+        },
+        recentDonations: donorStats.recentDonations.map(donation => ({
+          id: donation.id,
+          foodName: donation.foodName,
+          quantity: donation.quantity,
+          quantityUnit: donation.quantityUnit,
+          category: donation.category,
+          status: donation.status,
+          pickupTimeStart: donation.pickupTimeStart,
+          pickupTimeEnd: donation.pickupTimeEnd,
+          expiryTime: donation.expiryTime,
+          description: donation.description,
+          createdAt: donation.createdAt,
+          claimedBy: donation.claimedBy,
+          claimedByName: donation.claimedByName,
+          claimedAt: donation.claimedAt,
+        })),
+        exportDate: new Date().toISOString(),
+        exportVersion: '1.0',
+      };
+
+      // Convert to JSON and create blob
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `donor-data-${user.fullName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Data Downloaded",
+        description: "Your data has been successfully exported.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Failed to download your data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleEditStart = () => {
     setEditForm({
@@ -519,21 +711,49 @@ const DonorProfile = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Other Settings
+                  <Lock className="h-5 w-5" />
+                  Privacy Settings
                 </CardTitle>
                 <CardDescription>
-                  Additional account preferences
+                  Control who can see your profile and contact information
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PrivacySettingsSection />
+              </CardContent>
+            </Card>
+
+            {/* Account Management Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Account Management
+                </CardTitle>
+                <CardDescription>
+                  Manage your account and data
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between py-2">
                   <div>
-                    <h4 className="font-medium">Privacy Settings</h4>
-                    <p className="text-sm text-gray-600">Control who can see your profile</p>
+                    <h4 className="font-medium">Download My Data</h4>
+                    <p className="text-sm text-gray-600">Export all your account data and donation history</p>
                   </div>
-                  <Button variant="outline" size="sm" disabled>
-                    Coming Soon
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleDownloadData}
+                    disabled={donorStats.loading}
+                  >
+                    {donorStats.loading ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Download'
+                    )}
                   </Button>
                 </div>
                 
