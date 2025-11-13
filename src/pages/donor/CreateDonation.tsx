@@ -13,6 +13,7 @@ import { Plus, X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import * as fs from '@/services/firestore';
 import { compressImage, generateUUID } from '@/utils/image';
+import { MapPicker } from '@/components/MapPicker';
 
 const categories = [
   'Cooked Food',
@@ -44,6 +45,8 @@ export default function CreateDonation() {
     category: '',
     expiryTime: '',
     pickupAddress: user?.address || '',
+    pickupLatitude: user?.latitude || 19.8762,
+    pickupLongitude: user?.longitude || 75.3433,
     pickupTimeStart: '',
     pickupTimeEnd: '',
     additionalNotes: '',
@@ -51,6 +54,15 @@ export default function CreateDonation() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleLocationSelect = (lat: number, lng: number, address?: string) => {
+    setFormData(prev => ({
+      ...prev,
+      pickupLatitude: lat,
+      pickupLongitude: lng,
+      ...(address && { pickupAddress: address }),
+    }));
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,8 +138,8 @@ export default function CreateDonation() {
         allergens: selectedAllergens,
         expiryTime: new Date(formData.expiryTime).toISOString(),
         pickupAddress: formData.pickupAddress,
-        pickupLatitude: user.latitude,
-        pickupLongitude: user.longitude,
+        pickupLatitude: formData.pickupLatitude,
+        pickupLongitude: formData.pickupLongitude,
         pickupTimeStart: new Date(formData.pickupTimeStart).toISOString(),
         pickupTimeEnd: new Date(formData.pickupTimeEnd).toISOString(),
         status: 'available' as const,
@@ -281,6 +293,16 @@ export default function CreateDonation() {
                   required
                   value={formData.pickupAddress}
                   onChange={handleChange}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Pickup Location on Map</Label>
+                <MapPicker
+                  onLocationSelect={handleLocationSelect}
+                  initialLat={formData.pickupLatitude}
+                  initialLng={formData.pickupLongitude}
+                  height="350px"
                 />
               </div>
 
